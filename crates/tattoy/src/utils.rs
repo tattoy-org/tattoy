@@ -20,6 +20,15 @@ pub const CLEAR_SCREEN: &str = "\x1b[2J";
 /// OSC code to reset the terminal screen.
 pub const RESET_SCREEN: &str = "\x1bc";
 
+/// The escape character.
+pub const ESCAPE: &str = "\x1b";
+
+/// The string terminator character.
+pub const STRING_TERMINATOR: &str = "\x1c";
+
+/// The bell character.
+pub const BELL: &str = "\x07";
+
 /// Smoothly transition between 2 values.
 #[must_use]
 pub fn smoothstep(edge0: f32, edge1: f32, mut x: f32) -> f32 {

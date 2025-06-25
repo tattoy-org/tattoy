@@ -144,7 +144,7 @@ impl Renderer {
     }
 
     /// The Termwiz terminal is a wrapper around the user's actual terminal.
-    fn get_termwiz_terminal() -> Result<termwiz::terminal::SystemTerminal> {
+    pub fn get_termwiz_terminal() -> Result<termwiz::terminal::SystemTerminal> {
         let capabilities = termwiz::caps::Capabilities::new_from_env()?;
         Ok(termwiz::terminal::SystemTerminal::new(capabilities)?)
     }

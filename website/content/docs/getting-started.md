@@ -13,15 +13,16 @@ should be on the [downloads](/download) page.
 * For shader support you will also need a GPU, which almost all modern machines have, even if it's just an integrated one. Most Tattoy features still work without a GPU.
 
 ## Palette Parsing
-In order for Tattoy to be able to composite the colours of your terminal's palette theme you will need
-to provide a screenshot of your palette so that Tattoy can extract the true colour values.
+In order for Tattoy to be able to composite the colours of your terminal's palette theme it will need to
+associate the palette index values (0-255) with actual true color RGB values. This usually happens
+automatically without any user interaction. However some terminal emulators don't support this. It's not
+just older terminals that suffer from this but multiplexors like `tmux` too. On failure, Tattoy will offer
+to parse your palette via a screenshot. But before that it may also be worth re-running Tattoy in a modern
+terminal without any multiplexors. Once the palette is parsed you can always return to your preferred terminal and multiplexor and Tattoy should work normally.
 
-Simply running `tattoy` for the first time will prompt to take a screenshot of the terminal from where
-the command was run. If you would rather provide your own screenshot then you can take the screenshot
-at this point and provide the file with the argument `tattoy --parse-palette <path/to/file>`. You may also
-want to provide your own screenshot if your OS's default screenshotter doesn't work for whatever reason.
+If you would rather provide your own screenshot then you can take a screenshot yourselfg and provide the file with the argument `tattoy --parse-palette <path/to/file>`.
 
-You can always re-capture your terminal's palette at any time with `tattoy --capture-palette`.
+You can always re-capture your terminal's palette at any time with `tattoy --capture-palette`. It will always try the automatic method first and then fallback to the screenshot method.
 
 ## Starting Tattoy
 Simply run `tattoy` from the CLI.

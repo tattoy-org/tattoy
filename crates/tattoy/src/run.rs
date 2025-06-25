@@ -58,11 +58,10 @@ pub(crate) enum Protocol {
 pub(crate) async fn run(state_arc: &std::sync::Arc<SharedState>) -> Result<()> {
     let protocol_tx = state_arc.protocol_tx.clone();
     let cli_args = setup(state_arc).await?;
-    let palette_config_exists =
-        crate::palette::parser::Parser::palette_config_exists(state_arc).await;
+    let palette_config_exists = crate::palette::main::palette_config_exists(state_arc).await;
 
     if cli_args.capture_palette {
-        crate::palette::parser::Parser::run(state_arc, None).await?;
+        crate::palette::main::get_palette(state_arc).await?;
         #[expect(clippy::exit, reason = "We don't want to actually run Tattoy")]
         std::process::exit(0);
     }
@@ -74,8 +73,10 @@ pub(crate) async fn run(state_arc: &std::sync::Arc<SharedState>) -> Result<()> {
     }
 
     if !palette_config_exists {
-        crate::palette::parser::Parser::run(state_arc, None).await?;
+        crate::palette::main::get_palette(state_arc).await?;
     }
+
+    let input_thread_handle = RawInput::start(protocol_tx.clone());
 
     let users_tty_size = crate::renderer::Renderer::get_users_tty_size()?;
     state_arc
@@ -88,7 +89,6 @@ pub(crate) async fn run(state_arc: &std::sync::Arc<SharedState>) -> Result<()> {
     let (renderer, surfaces_tx) = Renderer::start(Arc::clone(state_arc), protocol_tx.clone());
 
     let config_handle = crate::config::main::Config::watch(Arc::clone(state_arc));
-    let input_thread_handle = RawInput::start(protocol_tx.clone());
 
     override_on_panic_behaviour();
     let tattoys_handle = crate::loader::start_tattoys(

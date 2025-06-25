@@ -20,9 +20,6 @@ pub type Screenshot = xcap::image::ImageBuffer<xcap::image::Rgba<u8>, std::vec::
 /// The number of palette colours we put in each row of our "QR code".
 pub const PALETTE_ROW_SIZE: u8 = 16;
 
-/// A default palette for users that can't parse their own palette.
-const DEFAULT_PALETTE: &str = include_str!("../../default_palette.toml");
-
 /// A parser for converting default terminal palette colours to true colours.
 pub(crate) struct Parser;
 
@@ -69,26 +66,29 @@ impl Parser {
                 }
             }
         };
+
         palette.print_true_colour_palette()?;
-        Self::save(state, &palette).await?;
+        if Self::ask_if_palettes_look_the_same()? {
+            super::main::save(state, &palette).await?;
+        }
 
         Ok(())
     }
 
-    /// Canonical path to the palette config file.
-    pub async fn palette_config_path(
-        state: &std::sync::Arc<crate::shared_state::SharedState>,
-    ) -> std::path::PathBuf {
-        crate::config::main::Config::directory(state)
-            .await
-            .join("palette.toml")
-    }
+    /// Show the parsed palette and ask the user if it looks like their actual palette.
+    fn ask_if_palettes_look_the_same() -> Result<bool> {
+        print!("If the palettes look the same press 'y' to save: ");
+        std::io::stdout().flush()?;
+        let mut answer = String::new();
+        std::io::stdin().read_line(&mut answer)?;
+        println!();
 
-    /// Does a palette config file exist?
-    pub async fn palette_config_exists(
-        state: &std::sync::Arc<crate::shared_state::SharedState>,
-    ) -> bool {
-        Self::palette_config_path(state).await.exists()
+        if answer != format!("y{}", crate::utils::NEWLINE) {
+            println!("'y' not selected, exiting...");
+            return Ok(true);
+        }
+
+        Ok(false)
     }
 
     /// Print all the colours of the terminal to STDOUT.
@@ -124,7 +124,7 @@ impl Parser {
            \x1b[38;2;148;0;211mw\
            \x1b[0m";
         print!(
-            "Check that each letter in the word 'rainbow' is different: {rainbow}\n\
+            "First, check that each letter in the word 'rainbow' is different: {rainbow}\n\
             If not, then your terminal does not support (or hasn't enabled) true colors and \
             Tattoy will not work.\n\n"
         );
@@ -176,14 +176,18 @@ impl Parser {
     ) -> Result<Option<Screenshot>> {
         println!("{}", crate::utils::RESET_SCREEN);
 
-        if !Self::palette_config_exists(state).await {
+        if !super::main::palette_config_exists(state).await {
             print!(
-                "You don't currently have a palette config file. \
-                It's needed to associate RGB colour values with your terminal's palette. \
-                The most convenient way of doing this is to let Tattoy take a \
-                scrrenshot of your current terminal. However, you can also provide your \
-                own screenshot with the `--parse-palette` argument, or just use a default \
-                palette (Tokyo Night).\n\n"
+                "Automatically querying your terminal's palette failed. This most often \
+                happens on older terminals or when running inside a multiplexer like `tmux`. \
+                So you may have success trying again with a different setup. Note that once \
+                palette parsing has succeeded you can return to your preffered setup as normal. \
+                \n\n\
+                Also, Tattoy has another method: screenshotting your palette, which you can do \
+                right now by either letting Tattoy take the screenshot for you or provide one \
+                you've taken yourself with the `--parse-palette` argument. \
+                \n\n\
+                And if all else fails you can just use the default bundled palette (Tokyo Night).\n\n"
             );
         }
 
@@ -209,7 +213,7 @@ impl Parser {
         }
 
         if answer == default {
-            Self::set_default_palette(state).await?;
+            super::main::set_default_palette(state).await?;
             return Ok(None);
         }
 
@@ -232,40 +236,5 @@ impl Parser {
         }
 
         color_eyre::eyre::bail!("No windows and monitors found to take screenshot on");
-    }
-
-    /// Save the default palette config to the user's Tattoy config path.
-    async fn set_default_palette(
-        state: &std::sync::Arc<crate::shared_state::SharedState>,
-    ) -> Result<()> {
-        let path = Self::palette_config_path(state).await;
-        std::fs::write(path.clone(), DEFAULT_PALETTE)?;
-
-        println!("Default palette saved to: {}", path.display());
-        Ok(())
-    }
-
-    /// Save the parsed palette true colours as TOML in the Tattoy config directory.
-    async fn save(
-        state: &std::sync::Arc<crate::shared_state::SharedState>,
-        palette: &crate::palette::converter::Palette,
-    ) -> Result<()> {
-        print!("If the palettes look the same press 'y' to save: ");
-        std::io::stdout().flush()?;
-        let mut answer = String::new();
-        std::io::stdin().read_line(&mut answer)?;
-        println!();
-
-        if answer != format!("y{}", crate::utils::NEWLINE) {
-            println!("'y' not selected, exiting...");
-            return Ok(());
-        }
-
-        let path = Self::palette_config_path(state).await;
-        let data = toml::to_string(&palette.map)?;
-        std::fs::write(path.clone(), data)?;
-
-        println!("Palette saved to: {}", path.display());
-        Ok(())
     }
 }
