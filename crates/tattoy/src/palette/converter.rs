@@ -6,17 +6,11 @@ use color_eyre::{eyre::ContextCompat as _, Result};
 /// the palette when no other index or true colour is specified.
 const DEFAULT_TEXT_PALETTE_INDEX: u8 = 15;
 
-/// A single palette colour.
-type PaletteColour = (u8, u8, u8);
-
-/// A hash of palette indexes to true colour values.
-pub type PaletteHashMap = std::collections::HashMap<String, PaletteColour>;
-
 /// Convenience type for the palette hash.
 #[derive(Clone)]
 pub(crate) struct Palette {
     /// The palette hash.
-    pub map: PaletteHashMap,
+    pub map: super::main::PaletteHashMap,
 }
 
 impl Palette {

@@ -405,7 +405,7 @@ impl Config {
     pub async fn load_palette(
         state: std::sync::Arc<crate::shared_state::SharedState>,
     ) -> Result<crate::palette::converter::Palette> {
-        let path = crate::palette::parser::Parser::palette_config_path(&state).await;
+        let path = crate::palette::main::palette_config_path(&state).await;
         if !path.exists() {
             color_eyre::eyre::bail!(
                 "Terminal palette colours config file not found at: {}",
@@ -415,7 +415,7 @@ impl Config {
 
         tracing::info!("Loading the terminal palette's true colours from config");
         let data = tokio::fs::read_to_string(path).await?;
-        let map = toml::from_str::<crate::palette::converter::PaletteHashMap>(&data)?;
+        let map = toml::from_str::<crate::palette::main::PaletteHashMap>(&data)?;
         let palette = crate::palette::converter::Palette { map };
         Ok(palette)
     }

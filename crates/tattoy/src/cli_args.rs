@@ -23,7 +23,8 @@ pub(crate) struct CliArgs {
     #[arg(long)]
     pub command: Option<String>,
 
-    /// Use image capture to detect the true colour values of the terminal's palette.
+    /// Capture the true color values of the terminal's palette. First tries using ANSI CSI queries
+    /// and if that fails resorts to parsing a screenshot of the palette (with user's consent).
     #[arg(long)]
     pub capture_palette: bool,
 

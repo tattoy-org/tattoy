@@ -17,6 +17,8 @@ pub mod raw_input;
 /// The palette code is for helping convert a terminal's palette to true colour.
 pub mod palette {
     pub mod converter;
+    pub mod main;
+    pub mod osc;
     pub mod parser;
     pub mod state_machine;
 }
