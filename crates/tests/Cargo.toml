@@ -6,7 +6,7 @@ publish = false
 
 [dev-dependencies]
 palette.workspace = true
-shadow-terminal = { path = "../shadow_terminal", version = "0.1.0" }
+shadow-terminal.workspace = true
 tempfile.workspace = true
 termwiz.workspace = true
 tokio.workspace = true
