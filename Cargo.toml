@@ -2,9 +2,7 @@
 resolver = "2"
 members = [
     "crates/tattoy",
-		"crates/tattoy-protocol",
-    "crates/shadow_terminal",
-    
+		"crates/tattoy-protocol",    
 		"crates/tests",
 		"crates/tattoy-plugins/inverter",
 		"crates/tattoy-plugins/smokey_cursor",
@@ -23,6 +21,10 @@ tempfile = "3.17.1"
 tokio = { version = "1.43.0", features = ["full", "tracing"] }
 tracing = "0.1.40"
 tracing-subscriber = {version = "0.3.18", features = ["env-filter"]}
+
+[workspace.dependencies.shadow-terminal]
+version = "0.1.1"
+# path = "../../shadow-terminal"
 
 [workspace.dependencies.termwiz]
 package = "tattoy-termwiz"

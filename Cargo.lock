@@ -3085,6 +3085,8 @@ dependencies = [
 [[package]]
 name = "shadow-terminal"
 version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9fde4bca764eefc415675dac0eafe5e6465f4ed5a99e17b330d123f8eb0f34f5"
 dependencies = [
  "portable-pty",
  "snafu",
@@ -3345,7 +3347,7 @@ dependencies = [
  "serde",
  "serde_json",
  "shadow-terminal",
- "tattoy-protocol 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tattoy-protocol",
  "tattoy-termwiz",
  "tempfile",
  "tokio",
@@ -3359,17 +3361,6 @@ dependencies = [
 [[package]]
 name = "tattoy-protocol"
 version = "0.1.0"
-dependencies = [
- "bon",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "tattoy-protocol"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ed972d6067557797753d9f013daf126e397175fe3e29e32147a0106caf574b28"
 dependencies = [
  "bon",
  "serde",
@@ -3578,7 +3569,7 @@ name = "tattoy_inverter_plugin"
 version = "0.1.0"
 dependencies = [
  "serde_json",
- "tattoy-protocol 0.1.0",
+ "tattoy-protocol",
 ]
 
 [[package]]
@@ -3591,7 +3582,7 @@ dependencies = [
  "rayon",
  "rstar",
  "serde_json",
- "tattoy-protocol 0.1.0",
+ "tattoy-protocol",
  "tokio",
  "tracing",
  "tracing-subscriber",
