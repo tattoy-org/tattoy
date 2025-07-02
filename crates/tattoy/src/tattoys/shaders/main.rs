@@ -3,6 +3,7 @@
 
 use color_eyre::eyre::{ContextCompat as _, Result};
 use futures_util::FutureExt as _;
+use shadow_terminal::termwiz;
 
 use crate::tattoys::tattoyer::Tattoyer;
 
@@ -217,7 +218,7 @@ impl Shaders<'_> {
 
         let image = if is_upload_tty_as_pixels {
             self.tattoy
-                .convert_pty_to_pixel_image(&shadow_terminal::output::SurfaceKind::Screen)?
+                .convert_pty_to_pixel_image(&shadow_terminal::output::native::SurfaceKind::Screen)?
                 .flipv()
                 .into()
         } else {

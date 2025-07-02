@@ -79,32 +79,40 @@ impl Proxy {
     }
 
     /// Handle output from the Shadow Terminal.
-    async fn handle_output(&self, mut output: shadow_terminal::output::Output) -> Result<()> {
+    async fn handle_output(
+        &self,
+        mut output: shadow_terminal::output::native::Output,
+    ) -> Result<()> {
         tracing::trace!("Received output from Shadow Terminal: {output:?}");
         self.palette.convert_cells_to_true_colour(&mut output);
 
         match output.clone() {
-            shadow_terminal::output::Output::Diff(diff) => {
+            shadow_terminal::output::native::Output::Diff(diff) => {
                 self.reconstruct_surface_from_diff(diff).await?;
             }
-            shadow_terminal::output::Output::Complete(complete_surface) => match complete_surface {
-                shadow_terminal::output::CompleteSurface::Scrollback(scrollback) => {
-                    let mut shadow_tty_scrollback = self.state.shadow_tty_scrollback.write().await;
-                    *shadow_tty_scrollback = scrollback;
-                }
-                shadow_terminal::output::CompleteSurface::Screen(screen) => {
-                    let mut shadow_tty_screen = self.state.shadow_tty_screen.write().await;
-                    *shadow_tty_screen = screen.surface;
-                    drop(shadow_tty_screen);
+            shadow_terminal::output::native::Output::Complete(complete_surface) => {
+                match complete_surface {
+                    shadow_terminal::output::native::CompleteSurface::Scrollback(scrollback) => {
+                        let mut shadow_tty_scrollback =
+                            self.state.shadow_tty_scrollback.write().await;
+                        *shadow_tty_scrollback = scrollback;
+                    }
+                    shadow_terminal::output::native::CompleteSurface::Screen(screen) => {
+                        let mut shadow_tty_screen = self.state.shadow_tty_screen.write().await;
+                        *shadow_tty_screen = screen.surface;
+                        drop(shadow_tty_screen);
 
-                    let is_alternate_screen =
-                        matches!(screen.mode, shadow_terminal::output::ScreenMode::Alternate);
-                    self.state
-                        .set_is_alternate_screen(is_alternate_screen)
-                        .await;
+                        let is_alternate_screen = matches!(
+                            screen.mode,
+                            shadow_terminal::output::native::ScreenMode::Alternate
+                        );
+                        self.state
+                            .set_is_alternate_screen(is_alternate_screen)
+                            .await;
+                    }
+                    _ => (),
                 }
-                _ => (),
-            },
+            }
             _ => (),
         }
 
@@ -120,17 +128,17 @@ impl Proxy {
     /// Reconstruct full surfaces from diffs.
     async fn reconstruct_surface_from_diff(
         &self,
-        diff: shadow_terminal::output::SurfaceDiff,
+        diff: shadow_terminal::output::native::SurfaceDiff,
     ) -> Result<()> {
         match diff {
-            shadow_terminal::output::SurfaceDiff::Scrollback(scrollback_diff) => {
+            shadow_terminal::output::native::SurfaceDiff::Scrollback(scrollback_diff) => {
                 self.handle_scrolling_output(&scrollback_diff).await?;
                 self.reconstruct_scrollback_diff(scrollback_diff).await?;
             }
-            shadow_terminal::output::SurfaceDiff::Screen(screen_diff) => {
+            shadow_terminal::output::native::SurfaceDiff::Screen(screen_diff) => {
                 let is_alternate_screen = matches!(
                     screen_diff.mode,
-                    shadow_terminal::output::ScreenMode::Alternate
+                    shadow_terminal::output::native::ScreenMode::Alternate
                 );
                 self.state
                     .set_is_alternate_screen(is_alternate_screen)
@@ -146,7 +154,7 @@ impl Proxy {
     /// Reconstruct the scrollback surface from a diff of changes.
     async fn reconstruct_scrollback_diff(
         &self,
-        diff: shadow_terminal::output::ScrollbackDiff,
+        diff: shadow_terminal::output::native::ScrollbackDiff,
     ) -> Result<()> {
         let mut shadow_tty_scrollback = self.state.shadow_tty_scrollback.write().await;
 
@@ -167,7 +175,7 @@ impl Proxy {
     /// Handle new scrolling state from Shadow Terminal.
     async fn handle_scrolling_output(
         &self,
-        diff: &shadow_terminal::output::ScrollbackDiff,
+        diff: &shadow_terminal::output::native::ScrollbackDiff,
     ) -> Result<()> {
         let current_scrolling_state = self.state.get_is_scrolling().await;
         let new_is_scrolling_state = diff.position != 0;
@@ -183,7 +191,7 @@ impl Proxy {
     }
 
     /// Reconstruct the alternate screen surface from a diff of changes.
-    async fn reconstruct_screen_diff(&self, diff: shadow_terminal::output::ScreenDiff) {
+    async fn reconstruct_screen_diff(&self, diff: shadow_terminal::output::native::ScreenDiff) {
         let mut shadow_tty_screen = self.state.shadow_tty_screen.write().await;
         let size = self.state.get_tty_size().await;
 
@@ -220,7 +228,10 @@ impl Proxy {
     //
     /// Notify the Tattoy renderer and individial tattous that there's new frame data from the
     /// shadow terminal.
-    async fn send_pty_surface_notifications(&self, output: shadow_terminal::output::Output) {
+    async fn send_pty_surface_notifications(
+        &self,
+        output: shadow_terminal::output::native::Output,
+    ) {
         let frame_update_result = self
             .surfaces_tx
             .send(crate::run::FrameUpdate::PTYSurface)

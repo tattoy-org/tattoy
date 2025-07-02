@@ -3,6 +3,8 @@
 use color_eyre::eyre::ContextCompat as _;
 use color_eyre::eyre::Result;
 
+use shadow_terminal::termwiz;
+
 /// A copy of the default config file. It gets copied to the user's config folder the first time
 /// they start Tattoy.
 static DEFAULT_CONFIG: &str = include_str!("../../default_config.toml");

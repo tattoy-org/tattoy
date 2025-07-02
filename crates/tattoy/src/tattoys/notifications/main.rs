@@ -2,6 +2,7 @@
 
 use color_eyre::eyre::Result;
 use palette::Darken as _;
+use shadow_terminal::termwiz;
 
 /// User-configurable settings for the background command.
 #[derive(serde::Deserialize, Debug, Clone, Default)]

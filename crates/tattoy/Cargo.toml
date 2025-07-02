@@ -27,7 +27,6 @@ serde.workspace = true
 serde_json.workspace = true
 tattoy-protocol = { path = "../tattoy-protocol", version = "0.1.0" }
 tempfile.workspace = true
-termwiz.workspace = true
 tokio.workspace = true
 toml = "0.8.20"
 tracing.workspace = true

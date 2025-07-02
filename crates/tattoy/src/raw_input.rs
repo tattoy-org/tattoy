@@ -3,6 +3,7 @@
 use std::io::Read as _;
 
 use color_eyre::eyre::Result;
+use shadow_terminal::termwiz;
 
 /// Bytes from STDIN
 pub type BytesFromSTDIN = [u8; 128];

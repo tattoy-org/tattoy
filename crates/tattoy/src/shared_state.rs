@@ -4,6 +4,7 @@
 use std::sync::Arc;
 
 use color_eyre::eyre::Result;
+use shadow_terminal::termwiz;
 use tokio::sync::RwLock;
 
 use crate::renderer::Renderer;
@@ -43,7 +44,8 @@ pub(crate) struct SharedState {
     pub shadow_tty_screen: tokio::sync::RwLock<termwiz::surface::Surface>,
     // TODO: rename to `shadow_primary_screen`
     /// This is the entire scrollback history of the shadow terminal.
-    pub shadow_tty_scrollback: tokio::sync::RwLock<shadow_terminal::output::CompleteScrollback>,
+    pub shadow_tty_scrollback:
+        tokio::sync::RwLock<shadow_terminal::output::native::CompleteScrollback>,
     /// Is the user scrolling the scrollback?
     pub is_scrolling: tokio::sync::RwLock<bool>,
     /// Is the underlying shadow terminal in the so-called alternate screen state?

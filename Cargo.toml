@@ -23,14 +23,8 @@ tracing = "0.1.40"
 tracing-subscriber = {version = "0.3.18", features = ["env-filter"]}
 
 [workspace.dependencies.shadow-terminal]
-version = "0.1.1"
-# path = "../../shadow-terminal"
-
-[workspace.dependencies.termwiz]
-package = "tattoy-termwiz"
-features = ["use_serde"]
-version = "0.24.0-fork"
-# path = "../wezterm/termwiz"
+version = "0.2.0"
+# path = "../shadow-terminal/shadow-terminal/"
 
 # Canonical lints for whole crate
 #

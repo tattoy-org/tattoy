@@ -30,7 +30,7 @@ pub(crate) enum FrameUpdate {
 #[derive(Clone, Debug)]
 pub(crate) enum Protocol {
     /// Output from the PTY.
-    Output(shadow_terminal::output::Output),
+    Output(shadow_terminal::output::native::Output),
     /// The entire application is exiting.
     End,
     /// User's TTY is resized.

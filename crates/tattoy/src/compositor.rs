@@ -1,5 +1,6 @@
 //! Composite individual cells into the final renderablsee frame.
 use color_eyre::eyre::{ContextCompat as _, Result};
+use shadow_terminal::termwiz;
 
 /// Composite cells together, honouring alpha blending, text and pixels.
 #[derive(Default)]

@@ -122,7 +122,7 @@ impl BGCommand {
     /// Handle output from the headless terminal where the background command was spawned.
     async fn handle_bg_command_output(
         &mut self,
-        mut output: shadow_terminal::output::Output,
+        mut output: shadow_terminal::output::native::Output,
     ) -> Result<()> {
         self.palette.convert_cells_to_true_colour(&mut output);
         self.tattoy.opacity = self.tattoy.state.config.read().await.bg_command.opacity;
@@ -135,19 +135,21 @@ impl BGCommand {
             reason = "There's some deep types going on and I think it's easier to read"
         )]
         match output {
-            shadow_terminal::output::Output::Diff(surface_diff) => match surface_diff {
-                shadow_terminal::output::SurfaceDiff::Screen(screen_diff) => {
+            shadow_terminal::output::native::Output::Diff(surface_diff) => match surface_diff {
+                shadow_terminal::output::native::SurfaceDiff::Screen(screen_diff) => {
                     self.tattoy.surface.surface.add_changes(screen_diff.changes);
                 }
                 _ => (),
             },
-            shadow_terminal::output::Output::Complete(complete_surface) => match complete_surface {
-                shadow_terminal::output::CompleteSurface::Screen(complete_screen) => {
-                    self.tattoy.initialise_surface();
-                    self.tattoy.surface.surface = complete_screen.surface;
+            shadow_terminal::output::native::Output::Complete(complete_surface) => {
+                match complete_surface {
+                    shadow_terminal::output::native::CompleteSurface::Screen(complete_screen) => {
+                        self.tattoy.initialise_surface();
+                        self.tattoy.surface.surface = complete_screen.surface;
+                    }
+                    _ => (),
                 }
-                _ => (),
-            },
+            }
             _ => (),
         }
 

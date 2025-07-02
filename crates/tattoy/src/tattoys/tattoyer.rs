@@ -21,9 +21,9 @@ pub(crate) struct Tattoyer {
     /// TTY height
     pub height: u16,
     /// Our own copy of the scrollback. Saves taking costly read locks.
-    pub scrollback: shadow_terminal::output::CompleteScrollback,
+    pub scrollback: shadow_terminal::output::native::CompleteScrollback,
     /// Our own copy of the screen. Saves taking costly read locks.
-    pub screen: shadow_terminal::output::CompleteScreen,
+    pub screen: shadow_terminal::output::native::CompleteScreen,
     /// The target frame rate.
     pub target_frame_rate: u32,
     /// The time at which the previous frame was rendererd.
@@ -51,8 +51,8 @@ impl Tattoyer {
             surface: crate::surface::Surface::new(id, 0, 0, layer, opacity),
             width: tty_size.width,
             height: tty_size.height,
-            scrollback: shadow_terminal::output::CompleteScrollback::default(),
-            screen: shadow_terminal::output::CompleteScreen::default(),
+            scrollback: shadow_terminal::output::native::CompleteScrollback::default(),
+            screen: shadow_terminal::output::native::CompleteScreen::default(),
             target_frame_rate: 30,
             last_frame_tick: tokio::time::Instant::now(),
             last_scroll_position: 0,
@@ -116,22 +116,25 @@ impl Tattoyer {
     pub const fn is_alternate_screen(&self) -> bool {
         matches!(
             self.screen.mode,
-            shadow_terminal::output::ScreenMode::Alternate
+            shadow_terminal::output::native::ScreenMode::Alternate
         )
     }
 
     /// Handle new output from the underlying PTY.
-    pub fn handle_pty_output(&mut self, output: shadow_terminal::output::Output) -> Result<()> {
+    pub fn handle_pty_output(
+        &mut self,
+        output: shadow_terminal::output::native::Output,
+    ) -> Result<()> {
         match output {
-            shadow_terminal::output::Output::Diff(diff) => match diff {
-                shadow_terminal::output::SurfaceDiff::Scrollback(scrollback_diff) => {
+            shadow_terminal::output::native::Output::Diff(diff) => match diff {
+                shadow_terminal::output::native::SurfaceDiff::Scrollback(scrollback_diff) => {
                     self.scrollback
                         .surface
                         .resize(scrollback_diff.size.0, scrollback_diff.height);
                     self.scrollback.surface.add_changes(scrollback_diff.changes);
                     self.scrollback.position = scrollback_diff.position;
                 }
-                shadow_terminal::output::SurfaceDiff::Screen(screen_diff) => {
+                shadow_terminal::output::native::SurfaceDiff::Screen(screen_diff) => {
                     self.screen
                         .surface
                         .resize(screen_diff.size.0, screen_diff.size.1);
@@ -143,11 +146,13 @@ impl Tattoyer {
                 }
                 _ => (),
             },
-            shadow_terminal::output::Output::Complete(complete) => match complete {
-                shadow_terminal::output::CompleteSurface::Scrollback(complete_scrollback) => {
+            shadow_terminal::output::native::Output::Complete(complete) => match complete {
+                shadow_terminal::output::native::CompleteSurface::Scrollback(
+                    complete_scrollback,
+                ) => {
                     self.scrollback = complete_scrollback;
                 }
-                shadow_terminal::output::CompleteSurface::Screen(complete_screen) => {
+                shadow_terminal::output::native::CompleteSurface::Screen(complete_screen) => {
                     self.screen = complete_screen;
                 }
                 _ => (),
@@ -196,16 +201,16 @@ impl Tattoyer {
         match message {
             crate::run::Protocol::Resize { .. } => return true,
             crate::run::Protocol::Output(output) => match output {
-                shadow_terminal::output::Output::Diff(
-                    shadow_terminal::output::SurfaceDiff::Scrollback(diff),
+                shadow_terminal::output::native::Output::Diff(
+                    shadow_terminal::output::native::SurfaceDiff::Scrollback(diff),
                 ) => {
                     // There is always one change to indicate the current position of the cursor.
                     if diff.changes.len() > 1 {
                         return true;
                     }
                 }
-                shadow_terminal::output::Output::Complete(
-                    shadow_terminal::output::CompleteSurface::Scrollback(_),
+                shadow_terminal::output::native::Output::Complete(
+                    shadow_terminal::output::native::CompleteSurface::Scrollback(_),
                 ) => {
                     return true;
                 }
@@ -226,16 +231,16 @@ impl Tattoyer {
         match message {
             crate::run::Protocol::Resize { .. } => return true,
             crate::run::Protocol::Output(output) => match output {
-                shadow_terminal::output::Output::Diff(
-                    shadow_terminal::output::SurfaceDiff::Screen(diff),
+                shadow_terminal::output::native::Output::Diff(
+                    shadow_terminal::output::native::SurfaceDiff::Screen(diff),
                 ) => {
                     // There is always one change to indicate the current position of the cursor.
                     if diff.changes.len() > 1 {
                         return true;
                     }
                 }
-                shadow_terminal::output::Output::Complete(
-                    shadow_terminal::output::CompleteSurface::Screen(_),
+                shadow_terminal::output::native::Output::Complete(
+                    shadow_terminal::output::native::CompleteSurface::Screen(_),
                 ) => {
                     return true;
                 }
@@ -250,12 +255,12 @@ impl Tattoyer {
     /// Has the contents of the PTY changed?
     pub const fn is_pty_changed(
         message: &crate::run::Protocol,
-    ) -> Option<shadow_terminal::output::SurfaceKind> {
+    ) -> Option<shadow_terminal::output::native::SurfaceKind> {
         if Self::is_scrollback_output_changed(message) {
-            return Some(shadow_terminal::output::SurfaceKind::Scrollback);
+            return Some(shadow_terminal::output::native::SurfaceKind::Scrollback);
         }
         if Self::is_screen_output_changed(message) {
-            return Some(shadow_terminal::output::SurfaceKind::Screen);
+            return Some(shadow_terminal::output::native::SurfaceKind::Screen);
         }
 
         None
@@ -264,13 +269,15 @@ impl Tattoyer {
     /// Convert the PTY's contents to a pixel image representation.
     pub fn convert_pty_to_pixel_image(
         &mut self,
-        kind: &shadow_terminal::output::SurfaceKind,
+        kind: &shadow_terminal::output::native::SurfaceKind,
     ) -> Result<image::DynamicImage> {
         let pixels_per_line = 2;
 
         let surface = match kind {
-            shadow_terminal::output::SurfaceKind::Scrollback => &mut self.scrollback.surface,
-            shadow_terminal::output::SurfaceKind::Screen => &mut self.screen.surface,
+            shadow_terminal::output::native::SurfaceKind::Scrollback => {
+                &mut self.scrollback.surface
+            }
+            shadow_terminal::output::native::SurfaceKind::Screen => &mut self.screen.surface,
             _ => {
                 color_eyre::eyre::bail!("Unkown surface kind: {kind:?}");
             }
