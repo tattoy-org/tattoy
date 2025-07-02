@@ -5,7 +5,7 @@ edition = "2021"
 publish = false
 
 [dependencies]
-tattoy-protocol = { path = "../../tattoy-protocol", version = "0.1.0" }
+tattoy-protocol = { path = "../../tattoy-protocol", version = "0.1.1" }
 serde_json.workspace = true
 
 [[bin]]
