@@ -12,6 +12,8 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Install Linux system dependencies
+        run: sudo apt-get install libxcb1-dev libdbus-1-dev
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
