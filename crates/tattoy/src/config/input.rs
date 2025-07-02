@@ -1,5 +1,7 @@
 //! Supporting user-defined keybindings.
 
+use shadow_terminal::termwiz;
+
 /// The user config for defining keybindings.
 #[derive(serde::Serialize, serde::Deserialize, PartialEq, Eq, Debug, Clone)]
 pub(crate) struct KeybindingConfigRaw {

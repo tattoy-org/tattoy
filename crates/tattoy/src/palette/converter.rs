@@ -1,6 +1,7 @@
 //! Convert palette indexes to true colour values.
 
 use color_eyre::{eyre::ContextCompat as _, Result};
+use shadow_terminal::termwiz;
 
 /// This might be a big assumption, but I think the convention is that text uses this colour from
 /// the palette when no other index or true colour is specified.
@@ -112,12 +113,17 @@ impl Palette {
     }
 
     /// Convert TTY cell palette indexes into their true colour values.
-    pub fn convert_cells_to_true_colour(&self, output: &mut shadow_terminal::output::Output) {
+    pub fn convert_cells_to_true_colour(
+        &self,
+        output: &mut shadow_terminal::output::native::Output,
+    ) {
         match output {
-            shadow_terminal::output::Output::Diff(surface_diff) => {
+            shadow_terminal::output::native::Output::Diff(surface_diff) => {
                 let changes = match surface_diff {
-                    shadow_terminal::output::SurfaceDiff::Scrollback(diff) => &mut diff.changes,
-                    shadow_terminal::output::SurfaceDiff::Screen(diff) => &mut diff.changes,
+                    shadow_terminal::output::native::SurfaceDiff::Scrollback(diff) => {
+                        &mut diff.changes
+                    }
+                    shadow_terminal::output::native::SurfaceDiff::Screen(diff) => &mut diff.changes,
                     _ => {
                         tracing::error!(
                             "Unrecognised surface diff when converting cells to true colour"
@@ -132,12 +138,12 @@ impl Palette {
                     }
                 }
             }
-            shadow_terminal::output::Output::Complete(complete_surface) => {
+            shadow_terminal::output::native::Output::Complete(complete_surface) => {
                 let cells = match complete_surface {
-                    shadow_terminal::output::CompleteSurface::Scrollback(scrollback) => {
+                    shadow_terminal::output::native::CompleteSurface::Scrollback(scrollback) => {
                         scrollback.surface.screen_cells()
                     }
-                    shadow_terminal::output::CompleteSurface::Screen(screen) => {
+                    shadow_terminal::output::native::CompleteSurface::Screen(screen) => {
                         screen.surface.screen_cells()
                     }
                     _ => {

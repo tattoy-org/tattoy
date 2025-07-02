@@ -30,6 +30,7 @@ mod e2e {
     use std::io::Write as _;
 
     use palette::color_difference::Wcag21RelativeContrast as _;
+    use shadow_terminal::termwiz;
     use shadow_terminal::{
         shadow_terminal::Config,
         steppable_terminal::{Input, SteppableTerminal},
@@ -301,8 +302,8 @@ mod e2e {
         assert_eq!(cell.str(), "9");
         assert_eq!(
             cell.attrs().foreground(),
-            termwiz::color::ColorAttribute::TrueColorWithDefaultFallback(
-                termwiz::color::SrgbaTuple(0.96862745, 0.4627451, 0.5568628, 1.0)
+            shadow_terminal::termwiz::color::ColorAttribute::TrueColorWithDefaultFallback(
+                shadow_terminal::termwiz::color::SrgbaTuple(0.96862745, 0.4627451, 0.5568628, 1.0)
             ),
         );
     }

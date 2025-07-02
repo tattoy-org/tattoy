@@ -3,6 +3,8 @@
 use color_eyre::eyre::bail;
 use color_eyre::eyre::ContextCompat as _;
 use color_eyre::eyre::Result;
+
+use shadow_terminal::termwiz;
 use termwiz::surface::Change as TermwizChange;
 use termwiz::surface::Position as TermwizPosition;
 

@@ -2,6 +2,7 @@
 //! index.
 
 use color_eyre::eyre::{ContextCompat as _, Result};
+use shadow_terminal::termwiz;
 use termwiz::terminal::Terminal as _;
 use tokio::io::{AsyncReadExt as _, AsyncWriteExt as _};
 

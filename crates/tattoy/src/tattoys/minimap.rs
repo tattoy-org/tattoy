@@ -3,6 +3,7 @@
 use std::sync::Arc;
 
 use color_eyre::eyre::{ContextCompat as _, Result};
+use shadow_terminal::termwiz;
 
 use super::tattoyer::Tattoyer;
 
@@ -211,7 +212,7 @@ impl Minimap {
     //   to not building unless visible, and provide a config option?
     //
     /// Rebuild the minimap.
-    async fn rebuild(&mut self, kind: shadow_terminal::output::SurfaceKind) -> Result<()> {
+    async fn rebuild(&mut self, kind: shadow_terminal::output::native::SurfaceKind) -> Result<()> {
         self.build_minimap(kind).await?;
         self.output_changed = true;
 
@@ -345,7 +346,10 @@ impl Minimap {
 
     /// Build a minimap by converting terminal cells to a raw RGB image and then resizing the
     /// image.
-    async fn build_minimap(&mut self, kind: shadow_terminal::output::SurfaceKind) -> Result<()> {
+    async fn build_minimap(
+        &mut self,
+        kind: shadow_terminal::output::native::SurfaceKind,
+    ) -> Result<()> {
         let image = self.tattoy.convert_pty_to_pixel_image(&kind)?;
 
         let max_width = self.state.config.read().await.minimap.max_width;
@@ -358,8 +362,8 @@ impl Minimap {
             .to_rgba32f();
 
         match kind {
-            shadow_terminal::output::SurfaceKind::Scrollback => self.scrollback = minimap,
-            shadow_terminal::output::SurfaceKind::Screen => self.screen = minimap,
+            shadow_terminal::output::native::SurfaceKind::Scrollback => self.scrollback = minimap,
+            shadow_terminal::output::native::SurfaceKind::Screen => self.screen = minimap,
             _ => {
                 color_eyre::eyre::bail!("Unknown surface kind: {kind:?}");
             }

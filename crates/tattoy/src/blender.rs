@@ -5,7 +5,7 @@ use palette::{
     color_difference::Wcag21RelativeContrast as _, DarkenAssign as _, IntoColor as _,
     LightenAssign as _,
 };
-use termwiz::cell::Cell;
+use shadow_terminal::termwiz;
 
 /// This is the default colour for when an opaque cell is over a "blank" cell.
 ///
@@ -27,7 +27,7 @@ enum Kind {
 /// having a dedicated module hopefully makes things a bit simpler.
 pub(crate) struct Blender<'cell> {
     /// The normal underlying cell
-    cell: &'cell mut Cell,
+    cell: &'cell mut termwiz::cell::Cell,
     /// The true colour value to use when the cell doesn't have a colour.
     default_colour: termwiz::color::SrgbaTuple,
     /// The opacity of the cell above.
@@ -37,7 +37,7 @@ pub(crate) struct Blender<'cell> {
 impl<'cell> Blender<'cell> {
     /// Instantiate
     pub const fn new(
-        cell: &'cell mut Cell,
+        cell: &'cell mut termwiz::cell::Cell,
         maybe_default_bg_colour: Option<termwiz::color::SrgbaTuple>,
         cell_above_opacity: f32,
     ) -> Self {
@@ -104,7 +104,7 @@ impl<'cell> Blender<'cell> {
     }
 
     /// Blend the cell's colours with the cell above.
-    pub fn blend_all(&mut self, cell_above: &Cell) {
+    pub fn blend_all(&mut self, cell_above: &termwiz::cell::Cell) {
         let character_above = cell_above.str();
         let character_above_is_empty = character_above.is_empty() || character_above == " ";
         if character_above_is_empty {
@@ -269,7 +269,7 @@ mod test {
     async fn blend_pixels(
         maybe_first: Option<(usize, usize, crate::surface::Colour)>,
         maybe_second: Option<(usize, usize, crate::surface::Colour)>,
-    ) -> Cell {
+    ) -> termwiz::cell::Cell {
         let mut renderer = make_renderer().await;
         let mut tattoy_below = crate::surface::Surface::new("below".into(), 1, 1, 1, 1.0);
         if let Some(first) = maybe_first {

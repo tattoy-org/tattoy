@@ -4,8 +4,8 @@ use std::str::FromStr as _;
 use std::sync::Arc;
 
 use color_eyre::eyre::{bail, Result};
-use termwiz::cell::{Cell, CellAttributes};
 
+use shadow_terminal::termwiz;
 use termwiz::surface::Surface as TermwizSurface;
 use termwiz::surface::{Change as TermwizChange, Position as TermwizPosition};
 use termwiz::terminal::buffered::BufferedTerminal;
@@ -60,7 +60,7 @@ pub(crate) struct Renderer {
     /// The base composited frame onto which all tattoys are rendered.
     pub frame: termwiz::surface::Surface,
     /// A little indicator to show that Tattoy is running.
-    pub indicator_cell: Cell,
+    pub indicator_cell: termwiz::cell::Cell,
     /// Is the cursor currently visible?
     pub is_cursor_visible: bool,
 }
@@ -96,15 +96,15 @@ impl Renderer {
     }
 
     /// Create the little indicator pixel that shows that Tattoy is running.
-    fn indicator_cell() -> Result<Cell> {
-        let mut attributes = CellAttributes::default();
+    fn indicator_cell() -> Result<termwiz::cell::Cell> {
+        let mut attributes = termwiz::cell::CellAttributes::default();
         let result = termwiz::color::SrgbaTuple::from_str(crate::utils::TATTOY_BLUE);
         match result {
             Ok(mut rgba) => {
                 rgba.3 = 0.7;
                 let colour = termwiz::color::ColorAttribute::TrueColorWithDefaultFallback(rgba);
                 attributes.set_foreground(colour);
-                Ok(Cell::new('▀', attributes))
+                Ok(termwiz::cell::Cell::new('▀', attributes))
             }
             Err(()) => bail!("Couldn't convert indicator cell colour to SRGBA"),
         }
@@ -518,7 +518,7 @@ impl Renderer {
     fn get_shader_cells(
         maybe_shader: Option<&mut crate::surface::Surface>,
         frame_size: (usize, usize),
-    ) -> Option<Vec<&mut [Cell]>> {
+    ) -> Option<Vec<&mut [termwiz::cell::Cell]>> {
         if let Some(shader) = maybe_shader {
             if shader.surface.dimensions() == frame_size {
                 let shader_cells = shader.surface.screen_cells();

@@ -1,6 +1,7 @@
 //! Handle parsed input events
 
 use color_eyre::eyre::{ContextCompat as _, Result};
+use shadow_terminal::termwiz;
 
 impl crate::terminal_proxy::proxy::Proxy {
     /// Handle input from the end user.
