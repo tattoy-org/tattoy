@@ -92,12 +92,12 @@ jobs:
             --strip \
             --package tattoy \
             --verbose \
-            --output tattoy-${{ github.ref_name }}.deb
+            --output ${{ github.ref_name }}.deb
       - name: Upload .deb to the release
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: tattoy-${{ github.ref_name }}.deb
+          file: ${{ github.ref_name }}.deb
           tag: ${{ github.ref_name }}
 
   publish-rpm:
@@ -121,12 +121,12 @@ jobs:
           cargo build --release --locked --package tattoy
           cargo generate-rpm \
             --package crates/tattoy \
-            --output tattoy-${{ github.ref_name }}.x86_64.rpm
+            --output ${{ github.ref_name }}.x86_64.rpm
       - name: Upload the release
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: tattoy-${{ github.ref_name }}.x86_64.rpm
+          file: ${{ github.ref_name }}.x86_64.rpm
           tag: ${{ github.ref }}
 
   publish-aur:
