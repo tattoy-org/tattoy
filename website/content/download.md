@@ -15,13 +15,13 @@ Tattoy has prebuilt binaries for both x86 and ARM architectures on all the 3 maj
 
 ### Ubuntu, Debian
 ```sh
-curl -LO https://github.com/tattoy-org/tattoy/releases/download/v{{ include(path='build-vars/version') }}/tattoy-v{{ include(path='build-vars/version') }}.deb
+curl -LO https://github.com/tattoy-org/tattoy/releases/download/tattoy-v{{ include(path='build-vars/version') }}/tattoy-v{{ include(path='build-vars/version') }}.deb
 sudo dpkg --install tattoy-v{{ include(path='build-vars/version') }}.deb
 ```
 
 ### Fedora, RHEL
 ```sh
-sudo dnf install https://github.com/tattoy-org/tattoy/releases/download/v{{ include(path='build-vars/version') }}/tattoy-v{{ include(path='build-vars/version') }}.x86_64.rpm
+sudo dnf install https://github.com/tattoy-org/tattoy/releases/download/tattoy-v{{ include(path='build-vars/version') }}/tattoy-v{{ include(path='build-vars/version') }}.x86_64.rpm
 ```
 
 ### Homebrew
