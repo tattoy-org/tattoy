@@ -1,7 +1,7 @@
 //! Support for the Shader Toy convention of a `iChannel0` buffer. In our case it typically
 //! contains a pixel representation of the TTY.
 
-impl super::gpu::GPU<'_> {
+impl super::pipeline::GPU<'_> {
     /// Update the GPU with the current state of the terminal as RGB values.
     pub fn update_ichannel_texture_data(&self, image_data: &image::RgbaImage) {
         let tty_image_width = image_data.dimensions().0;

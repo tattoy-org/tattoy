@@ -48,12 +48,12 @@ pub mod tattoys {
     pub mod plugins;
     pub mod random_walker;
     pub mod scrollbar;
+    pub mod shader;
 
-    /// Shadertoy-like shaders
-    pub mod shaders {
-        pub mod gpu;
+    /// GPU management code
+    pub mod gpu {
         pub mod ichannel;
-        pub mod main;
+        pub mod pipeline;
     }
 
     pub mod tattoyer;
