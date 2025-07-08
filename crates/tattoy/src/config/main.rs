@@ -10,7 +10,7 @@ use shadow_terminal::termwiz;
 static DEFAULT_CONFIG: &str = include_str!("../../default_config.toml");
 
 /// Bundle an example shader with Tattoy.
-static EXAMPLE_SHADER: &str = include_str!("../tattoys/shaders/soft_shadows.glsl");
+static EXAMPLE_SHADER: &str = include_str!("../tattoys/gpu/soft_shadows.glsl");
 
 /// Filename of the default shader
 pub static DEFAULT_SHADER_FILENAME: &str = "soft_shadows.glsl";
@@ -70,7 +70,7 @@ pub(crate) struct Config {
     /// The minimap
     pub minimap: crate::tattoys::minimap::Config,
     /// The shaders
-    pub shader: crate::tattoys::shaders::main::Config,
+    pub shader: crate::tattoys::shader::Config,
     /// Background command
     pub bg_command: crate::tattoys::bg_command::Config,
     /// Notifications
@@ -109,7 +109,7 @@ impl Default for Config {
             text_contrast: TextContrast::default(),
             plugins: Vec::default(),
             minimap: crate::tattoys::minimap::Config::default(),
-            shader: crate::tattoys::shaders::main::Config::default(),
+            shader: crate::tattoys::shader::Config::default(),
             bg_command: crate::tattoys::bg_command::Config::default(),
             notifications: crate::tattoys::notifications::main::Config::default(),
         }

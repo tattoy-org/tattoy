@@ -72,7 +72,7 @@ pub(crate) fn start_tattoys(
                 || state.config.read().await.shader.enabled
             {
                 tracing::info!("Starting 'shaders' tattoy...");
-                tattoy_futures.spawn(crate::tattoys::shaders::main::Shaders::start(
+                tattoy_futures.spawn(crate::tattoys::shader::Shaders::start(
                     output.clone(),
                     Arc::clone(&state),
                 ));

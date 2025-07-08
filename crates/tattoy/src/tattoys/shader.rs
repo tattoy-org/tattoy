@@ -55,7 +55,7 @@ pub(crate) struct Shaders<'shaders> {
     /// The base Tattoy struct
     tattoy: Tattoyer,
     /// All the special GPU handling code.
-    gpu: super::gpu::GPU<'shaders>,
+    gpu: super::gpu::pipeline::GPU<'shaders>,
 }
 
 impl Shaders<'_> {
@@ -67,7 +67,7 @@ impl Shaders<'_> {
         let shader_directory = state.config_path.read().await.clone();
         let shader_path = state.config.read().await.shader.path.clone();
         let tty_size = *state.tty_size.read().await;
-        let gpu = super::gpu::GPU::new(
+        let gpu = super::gpu::pipeline::GPU::new(
             shader_directory.join(shader_path),
             tty_size.width,
             tty_size.height * 2,
