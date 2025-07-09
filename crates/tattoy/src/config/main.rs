@@ -12,11 +12,20 @@ static DEFAULT_CONFIG: &str = include_str!("../../default_config.toml");
 /// Bundle an example shader with Tattoy.
 static EXAMPLE_SHADER: &str = include_str!("../tattoys/gpu/soft_shadows.glsl");
 
+/// Bundle an example cursor shader with Tattoy.
+static EXAMPLE_CURSOR_SHADER: &str = include_str!("../tattoys/gpu/smear.glsl");
+
 /// Filename of the default shader
 pub static DEFAULT_SHADER_FILENAME: &str = "soft_shadows.glsl";
 
+/// Filename of the default animated cursor shader
+pub static DEFAULT_CURSOR_SHADER_FILENAME: &str = "smear.glsl";
+
 /// The name of the directory where shader files are kept.
-const SHADER_DIRECTORY_NAME: &str = "shaders";
+pub const SHADER_DIRECTORY_NAME: &str = "shaders";
+
+/// The name of the directory where cursor shader files are kept.
+pub const CURSOR_SHADER_DIRECTORY_NAME: &str = "shaders/cursors";
 
 /// The valid log levels. Based on our `tracing` crate.
 #[derive(serde::Serialize, serde::Deserialize, clap::ValueEnum, Debug, Clone, PartialEq, Eq)]
@@ -71,6 +80,8 @@ pub(crate) struct Config {
     pub minimap: crate::tattoys::minimap::Config,
     /// The shaders
     pub shader: crate::tattoys::shader::Config,
+    /// The animated Cursor
+    pub animated_cursor: crate::tattoys::animated_cursor::Config,
     /// Background command
     pub bg_command: crate::tattoys::bg_command::Config,
     /// Notifications
@@ -110,6 +121,7 @@ impl Default for Config {
             plugins: Vec::default(),
             minimap: crate::tattoys::minimap::Config::default(),
             shader: crate::tattoys::shader::Config::default(),
+            animated_cursor: crate::tattoys::animated_cursor::Config::default(),
             bg_command: crate::tattoys::bg_command::Config::default(),
             notifications: crate::tattoys::notifications::main::Config::default(),
         }
@@ -187,6 +199,9 @@ impl Config {
         let shaders_directory = path.join(SHADER_DIRECTORY_NAME);
         std::fs::create_dir_all(shaders_directory)?;
 
+        let animated_cursor_directory = path.join(CURSOR_SHADER_DIRECTORY_NAME);
+        std::fs::create_dir_all(animated_cursor_directory)?;
+
         *state.config_path.write().await = path;
 
         Ok(())
@@ -216,6 +231,12 @@ impl Config {
                 .join(SHADER_DIRECTORY_NAME)
                 .join(DEFAULT_SHADER_FILENAME);
             std::fs::write(shader_path, EXAMPLE_SHADER)?;
+
+            let animated_cursor_path = Self::directory(state)
+                .await
+                .join(CURSOR_SHADER_DIRECTORY_NAME)
+                .join(DEFAULT_CURSOR_SHADER_FILENAME);
+            std::fs::write(animated_cursor_path, EXAMPLE_CURSOR_SHADER)?;
         }
 
         tracing::info!("(Re)loading the main Tattoy config from: {config_path:?}");
