@@ -35,6 +35,7 @@ pub mod utils;
 
 /// This is where all the various tattoys are kept
 pub mod tattoys {
+    pub mod animated_cursor;
     pub mod bg_command;
     pub mod minimap;
     pub mod startup_logo;
@@ -52,8 +53,10 @@ pub mod tattoys {
 
     /// GPU management code
     pub mod gpu {
+        pub mod handle_messages;
         pub mod ichannel;
         pub mod pipeline;
+        pub mod shaderer;
     }
 
     pub mod tattoyer;

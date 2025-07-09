@@ -80,6 +80,21 @@ render_shader_colours_to_text = false
 # Tattoy's config directory.
 path = "shaders/soft_shadows.glsl"
 
+[animated_cursor]
+enabled = true
+opacity = 1.0
+# The animated cursor has special behaviour on layer -1. Only on this layer does the output
+# of the shader get merged into the _background_ of the terminal layer. Therefore it sits
+# between the foreground and background of layer 0. When setting this to another layer it
+# behaves as a normal layer would, therefore blending with both the foregrounds and backgrounds
+# of the layers above and below.
+layer = -1
+# Path to the cursor shader on your local filesystem. Is relative to the root of
+# Tattoy's config directory.
+path = "shaders/cursors/smear.glsl"
+# See same config setting in `[shader]` block.
+upload_tty_as_pixels = false
+
 [bg_command]
 enabled = false
 # The command to run. The executable goes in the first position and then each argument must

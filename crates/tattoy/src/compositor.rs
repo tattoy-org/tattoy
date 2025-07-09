@@ -24,7 +24,7 @@ impl Compositor {
 
     /// Get a reference to a cell.
     pub fn get_cell<'cell>(
-        cells: &'cell [&mut [termwiz::cell::Cell]],
+        cells: &'cell [&[termwiz::cell::Cell]],
         x: usize,
         y: usize,
     ) -> Result<&'cell termwiz::cell::Cell> {
@@ -56,6 +56,19 @@ impl Compositor {
         Self::composite_cells(&mut draft, cell_above, 1.0);
         let colour = draft.attrs().foreground();
         base_cell.attrs_mut().set_foreground(colour);
+    }
+
+    /// Just blend the background colours.
+    pub fn blend_bg_colours_only(
+        base_cell: &mut termwiz::cell::Cell,
+        cell_above: &termwiz::cell::Cell,
+        opacity: f32,
+    ) {
+        let mut scratch = base_cell.clone();
+        let mut blender = crate::blender::Blender::new(&mut scratch, None, opacity);
+        blender.blend_all(cell_above);
+        let colour = scratch.attrs().background();
+        base_cell.attrs_mut().set_background(colour);
     }
 
     /// Composite 2 cells together.

@@ -331,4 +331,29 @@ impl Tattoyer {
 
         Ok(image)
     }
+
+    /// Depending on whether the `upload_tty_as_pixels` config is set by the user, decide what to
+    /// send the GPU in order to represent the terminal contents.
+    pub fn get_tty_image_for_upload(
+        &mut self,
+        is_upload_tty_as_pixels: bool,
+    ) -> Result<image::RgbaImage> {
+        let image = if is_upload_tty_as_pixels {
+            self.convert_pty_to_pixel_image(&shadow_terminal::output::native::SurfaceKind::Screen)?
+                .flipv()
+                .into()
+        } else {
+            self.pure_black_image()
+        };
+
+        Ok(image)
+    }
+
+    /// A "blank" image for when the user doesn't want to upload the TTY but also wants to support
+    /// shaders that use `iChannel0`.
+    fn pure_black_image(&self) -> image::RgbaImage {
+        image::ImageBuffer::from_fn(self.width.into(), u32::from(self.height) * 2, |_, _| {
+            [0, 0, 0, 255].into()
+        })
+    }
 }

@@ -11,28 +11,51 @@ use wgpu::util::DeviceExt as _;
         it's just saner to keep as they appear.
     "
 )]
-// NOTE: The padding is because the total number of bytes must be a factor of 4.
+// NOTE: Padding is used to make all date align to 16 byte blocks.
 #[repr(C)]
 #[derive(Default, Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct Variables {
     /// The dimensions of the TTY.
     pub iResolution: [f32; 3],
-    /// Padding
+    /// Padding.
     _padding1: u32,
+
     /// The coordinates of the mouse.
     pub iMouse: [f32; 2],
     /// The coordinates of the cursor.
     pub iCursor: [f32; 2],
+
     /// The wall time since the shader started.
     iTime: f32,
     /// The number of rendered shader frames.
     iFrame: u32,
     /// Padding.
     _padding2: [u32; 2],
+
+    /// The position and size of the current current cursor. Note that this has a different type
+    /// from `iCursor` because it's how Ghostty communicates the cursor.
+    iCurrentCursor: [f32; 4],
+
+    /// The position and size of the cursor before it moved to its new position.
+    iPreviousCursor: [f32; 4],
+
+    /// The current colour of the cursor.
+    iCurrentCursorColor: [f32; 4],
+
+    /// The colour of the cursor before it moved to its new position.
+    iPreviousCursorColor: [f32; 4],
+
+    /// The transition point of the animated cursor.
+    iTimeCursorChange: f32,
+    /// Padding.
+    _padding3: [u32; 3],
 }
 
 /// Code for talking to the GPU.
-pub(crate) struct GPU<'gpu> {
+pub(crate) struct GPU {
+    /// The Tattoy protocol.
+    pub protocol: tokio::sync::broadcast::Sender<crate::run::Protocol>,
+
     /// Path to the current shader file.
     pub shader_path: std::path::PathBuf,
     /// The time at which rendering began.
@@ -52,7 +75,7 @@ pub(crate) struct GPU<'gpu> {
     variables_buffer: wgpu::Buffer,
 
     /// The output texture descriptor
-    output_texture_descriptor: wgpu::TextureDescriptor<'gpu>,
+    output_texture_descriptor: wgpu::TextureDescriptor<'static>,
     /// The texture on which the final render is placed.
     output_texture: wgpu::Texture,
     /// The raw data for the final render.
@@ -65,9 +88,14 @@ pub(crate) struct GPU<'gpu> {
     pipeline: Option<wgpu::RenderPipeline>,
 }
 
-impl GPU<'_> {
+impl GPU {
     /// Instantiate
-    pub async fn new(shader_path: std::path::PathBuf, width: u16, height: u16) -> Result<Self> {
+    pub async fn new(
+        shader_path: std::path::PathBuf,
+        width: u16,
+        height: u16,
+        protocol: tokio::sync::broadcast::Sender<crate::run::Protocol>,
+    ) -> Result<Self> {
         tracing::info!(
             "Initialising GPU pipeline for {shader_path:?} with dimensions {width}x{height}"
         );
@@ -112,6 +140,8 @@ impl GPU<'_> {
         let ichannel_texture =
             device.create_texture(&Self::ichannel_texture_descriptor(width, height));
         let mut gpu = Self {
+            protocol,
+
             shader_path,
             started: std::time::Instant::now(),
 
@@ -340,20 +370,24 @@ impl GPU<'_> {
         Ok(())
     }
 
-    /// Update the shader variables with the current elapsed wall time since the render began.
     #[expect(
         clippy::as_conversions,
         clippy::cast_precision_loss,
         reason = "The side effects are not serious. The value is only used on the GPU"
     )]
+    /// Get the wall time since the shader began.
+    fn get_current_time(&self) -> f32 {
+        (self.started.elapsed().as_millis() as f32) / crate::renderer::MILLIS_PER_SECOND
+    }
+
+    /// Update the shader variables with the current elapsed wall time since the render began.
     fn update_wall_time(&mut self) {
-        self.variables.iTime =
-            (self.started.elapsed().as_millis() as f32) / crate::renderer::MILLIS_PER_SECOND;
+        self.variables.iTime = self.get_current_time();
     }
 
     /// Update the `iResolution` variable for the shaders to consume.
     pub fn update_resolution(&mut self, width: u16, height: u16) -> Result<()> {
-        self.variables.iResolution = [width.into(), height.into(), 0.0];
+        self.variables.iResolution = [f32::from(width), f32::from(height), 0.0];
         self.recreate_ichannel_texture();
         self.rebuild_output_buffer()
     }
@@ -369,7 +403,56 @@ impl GPU<'_> {
     pub fn update_cursor_position(&mut self, col: u16, row: u16) {
         let image_height = self.variables.iResolution[1];
         let y: f32 = (row * 2).into();
-        self.variables.iCursor = [col.into(), image_height - y];
+        let cursor_center_x = f32::from(col);
+        let cursor_center_y = image_height - y;
+        self.variables.iCursor = [cursor_center_x, cursor_center_y];
+
+        self.update_cursor_position_ghostty_format(cursor_center_x, cursor_center_y);
+    }
+
+    /// Ghostty shaders use a slightly different format.
+    ///   * Different variable name, `iCurrentCursor` insteasd of `iCursor`.
+    ///   * The coordinates are anchored to the top left of the cursor cell.
+    ///   * `iCurrentCursor` also contains the cursor size.
+    #[expect(
+        clippy::cast_possible_truncation,
+        clippy::as_conversions,
+        reason = "There's no other `std` way to convert floats to integers"
+    )]
+    fn update_cursor_position_ghostty_format(&mut self, x: f32, y: f32) {
+        let scale = 0.01;
+        let cursor_width = 1.0 * scale;
+        let cursor_height = 2.0 * scale;
+        let cursor_top_left = (
+            (cursor_width / 2.0)
+                - (crate::tattoys::animated_cursor::CURSOR_DIMENSIONS_REAL.0 / 2.0),
+            (cursor_height / 2.0)
+                - (crate::tattoys::animated_cursor::CURSOR_DIMENSIONS_REAL.1 / 2.0),
+        );
+
+        let new_position_and_size = [
+            x - cursor_top_left.0,
+            y + cursor_top_left.1,
+            cursor_width,
+            cursor_height,
+        ];
+
+        let current_as_integer: Vec<i64> = self
+            .variables
+            .iCurrentCursor
+            .iter()
+            .map(|float| *float as i64)
+            .collect();
+        let new_as_integer: Vec<i64> = new_position_and_size
+            .iter()
+            .map(|float| *float as i64)
+            .collect();
+
+        if current_as_integer != new_as_integer {
+            self.variables.iTimeCursorChange = self.get_current_time();
+            self.variables.iPreviousCursor = self.variables.iCurrentCursor;
+            self.variables.iCurrentCursor = new_position_and_size;
+        }
     }
 
     /// Tick the render
