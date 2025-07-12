@@ -85,10 +85,13 @@ impl Compositor {
         let is_pixel_onto_non_pixel = is_character_above_pixel && !is_composited_cell_pixel;
 
         if is_character_above_text || is_pixel_onto_non_pixel {
-            *composited_cell = termwiz::cell::Cell::new(
-                character_above.chars().nth(0).unwrap_or(' '),
-                composited_cell.attrs().clone(),
-            );
+            let character = character_above.chars().nth(0).unwrap_or(' ');
+            let attributes = cell_above.attrs().clone();
+            let foreground = composited_cell.attrs().foreground();
+            let background = composited_cell.attrs().background();
+            *composited_cell = termwiz::cell::Cell::new(character, attributes);
+            composited_cell.attrs_mut().set_foreground(foreground);
+            composited_cell.attrs_mut().set_background(background);
         }
 
         let mut blender = crate::blender::Blender::new(composited_cell, None, opacity);
