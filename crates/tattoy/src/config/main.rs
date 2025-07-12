@@ -10,10 +10,10 @@ use shadow_terminal::termwiz;
 static DEFAULT_CONFIG: &str = include_str!("../../default_config.toml");
 
 /// Bundle an example shader with Tattoy.
-static EXAMPLE_SHADER: &str = include_str!("../tattoys/gpu/soft_shadows.glsl");
+static EXAMPLE_SHADER: &str = include_str!("../tattoys/gpu/shaders/soft_shadows.glsl");
 
 /// Bundle an example cursor shader with Tattoy.
-static EXAMPLE_CURSOR_SHADER: &str = include_str!("../tattoys/gpu/smear.glsl");
+static EXAMPLE_CURSOR_SHADER: &str = include_str!("../tattoys/gpu/shaders/smear.glsl");
 
 /// Filename of the default shader
 pub static DEFAULT_SHADER_FILENAME: &str = "soft_shadows.glsl";

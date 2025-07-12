@@ -593,7 +593,7 @@ impl GPU {
             .create_shader_module(wgpu::ShaderModuleDescriptor {
                 label: Some("Vertex Shader"),
                 source: wgpu::ShaderSource::Glsl {
-                    shader: include_str!("fullscreen_triangle.glsl").into(),
+                    shader: include_str!("shaders/fullscreen_triangle.glsl").into(),
                     stage: wgpu::naga::ShaderStage::Vertex,
                     defines: std::collections::HashMap::default(),
                 },
@@ -607,8 +607,8 @@ impl GPU {
         // `mainImage()` and providing known globals such as `iResolution`.
         let file = tokio::fs::read(self.shader_path.clone()).await?;
         let contents = String::from_utf8_lossy(&file);
-        let header = include_str!("header.glsl");
-        let footer = include_str!("footer.glsl");
+        let header = include_str!("shaders/header.glsl");
+        let footer = include_str!("shaders/footer.glsl");
         let shader = format!("{header}\n{contents}\n{footer}");
 
         let fragment_shader = self
