@@ -12,6 +12,12 @@ pub type PaletteColour = (u8, u8, u8);
 /// A hash of palette indexes to true colour values.
 pub type PaletteHashMap = std::collections::HashMap<String, PaletteColour>;
 
+/// The key for the foreground colour in the palette hash.
+pub const FOREGROUND_COLOUR_KEY: &str = "foreground";
+
+/// The key for the background colour in the palette hash.
+pub const BACKGROUND_COLOUR_KEY: &str = "background";
+
 /// Get the terminal's colour palette.
 pub(crate) async fn get_palette(
     state: &std::sync::Arc<crate::shared_state::SharedState>,
