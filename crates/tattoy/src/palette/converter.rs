@@ -3,10 +3,6 @@
 use color_eyre::{eyre::ContextCompat as _, Result};
 use shadow_terminal::termwiz;
 
-/// This might be a big assumption, but I think the convention is that text uses this colour from
-/// the palette when no other index or true colour is specified.
-const DEFAULT_TEXT_PALETTE_INDEX: u8 = 15;
-
 /// Convenience type for the palette hash.
 #[derive(Clone)]
 pub(crate) struct Palette {
@@ -31,20 +27,41 @@ impl Palette {
             .map
             .get(&index.to_string())
             .expect("Palette contains less than 256 colours");
-        termwiz::color::RgbColor::new_8bpc(true_colour.0, true_colour.1, true_colour.2).into()
+        Self::palette_colour_to_srgba(*true_colour)
     }
 
-    /// Terminal emulator convention is that the default background colour is the first colour in
-    /// the terminal's palette.
-    pub fn default_background_colour(&self) -> termwiz::color::SrgbaTuple {
+    /// Convert a palette colour to a Termwiz SRGBA tuple.
+    fn palette_colour_to_srgba(colour: super::main::PaletteColour) -> termwiz::color::SrgbaTuple {
+        termwiz::color::RgbColor::new_8bpc(colour.0, colour.1, colour.2).into()
+    }
+
+    /// The background colour defined by a cell merely not having any other colour set for its
+    /// background.
+    pub fn background_colour(&self) -> termwiz::color::SrgbaTuple {
+        if let Some(colour) = self.map.get(super::main::BACKGROUND_COLOUR_KEY) {
+            return Self::palette_colour_to_srgba(*colour);
+        }
+
+        // Terminal emulator convention is that the default background colour is the first colour
+        // in the terminal's palette.
+        //
+        // TODO: remove this once the screenshot parser supports background colour parsing.
         self.true_colour_tuple_from_index(0)
     }
 
-    /// This perhaps naively assumes that the default foreground colour is always found at palette
-    /// index 15. This could well be a bad idea, in which case we should add the default foreground
-    /// (and background) colour to the palatte swatch for parsing.
-    pub fn default_foreground_colour(&self) -> termwiz::color::SrgbaTuple {
-        self.true_colour_tuple_from_index(15)
+    /// The foreground colour defined by a cell merely not having any other colour set for its
+    /// foreground.
+    pub fn foreground_colour(&self) -> termwiz::color::SrgbaTuple {
+        if let Some(colour) = self.map.get(super::main::FOREGROUND_COLOUR_KEY) {
+            return Self::palette_colour_to_srgba(*colour);
+        }
+
+        // There's a nice history of the default foreground (and background) colours in this comment
+        // from the Microsoft Terminal repo:
+        // https://github.com/microsoft/terminal/discussions/14142#discussioncomment-3812803
+        //
+        // TODO: remove this once the screenshot parser supports background colour parsing.
+        self.true_colour_tuple_from_index(7)
     }
 
     /// Print all the true colour versions of the terminal's palette as found in the screenshot.
@@ -84,8 +101,9 @@ impl Palette {
             attributes.foreground(),
             termwiz::color::ColorAttribute::Default
         ) {
-            let colour_attribute =
-                self.true_colour_attribute_from_index(DEFAULT_TEXT_PALETTE_INDEX);
+            let colour_attribute = termwiz::color::ColorAttribute::TrueColorWithDefaultFallback(
+                self.foreground_colour(),
+            );
             attributes.set_foreground(colour_attribute);
             return;
         }
