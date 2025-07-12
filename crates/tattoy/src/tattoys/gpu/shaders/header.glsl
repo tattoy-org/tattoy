@@ -9,6 +9,12 @@ layout(binding = 0) uniform Variables
     vec2 iCursor;
     float iTime;
     int iFrame;
+
+    vec4 iCurrentCursor;
+    vec4 iPreviousCursor;
+    vec4 iCurrentCursorColor;
+    vec4 iPreviousCursorColor;
+    float iTimeCursorChange;
 };
 
 layout(binding = 1) uniform texture2D iChannelTexture;

@@ -301,6 +301,7 @@ impl Renderer {
                 if surface_id != "random_walker"
                     && surface_id != "shader"
                     && surface_id != "startup_logo"
+                    && surface_id != "animated_cursor"
                 {
                     tracing::trace!("Rendering {} frame update", surface_id);
                 }
@@ -443,6 +444,11 @@ impl Renderer {
             if tattoy.id == *"shader" && !self.state.config.read().await.shader.render {
                 continue;
             }
+            if tattoy.id == *"animated_cursor"
+                && self.state.config.read().await.animated_cursor.layer == -1
+            {
+                continue;
+            }
             let tattoy_frame_size = tattoy.surface.dimensions();
             if tattoy_frame_size != frame_size {
                 tracing::warn!(
@@ -469,7 +475,7 @@ impl Renderer {
         let mut frame_cells = self.frame.screen_cells();
 
         let pty_size = self.pty.dimensions();
-        let pty_cells = self.pty.screen_cells();
+        let pty_cells = self.pty.get_screen_cells();
 
         if pty_size != frame_size {
             tracing::warn!("Not rendering PTY as its size doesn't match the current frame size");
@@ -483,22 +489,50 @@ impl Renderer {
         drop(config);
 
         let maybe_shader_cells = if render_shader_colours_to_text {
-            Self::get_shader_cells(self.tattoys.get_mut("shader"), frame_size)
+            Self::get_shader_cells(self.tattoys.get("shader"), frame_size)
         } else {
             None
         };
+
+        let maybe_cursor_cells = if let Some(cursor_tattoy) = self.tattoys.get("animated_cursor") {
+            if cursor_tattoy.layer == -1 {
+                Self::get_shader_cells(self.tattoys.get("animated_cursor"), frame_size)
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        let is_rendering = *self.state.is_rendering_enabled.read().await;
+        let animated_cursor_opacity = self.state.config.read().await.animated_cursor.opacity;
 
         for (y, (frame_line, pty_line)) in frame_cells.iter_mut().zip(pty_cells).enumerate() {
             for (x, (frame_cell, pty_cell)) in frame_line.iter_mut().zip(pty_line).enumerate() {
                 Compositor::composite_cells(frame_cell, pty_cell, 1.0);
 
-                if !*self.state.is_rendering_enabled.read().await {
+                if !is_rendering {
                     continue;
                 }
 
                 if let Some(shader_cells) = maybe_shader_cells.as_ref() {
                     let shader_cell = Compositor::get_cell(shader_cells, x, y)?;
                     Compositor::composite_fg_colour_only(frame_cell, shader_cell);
+                }
+
+                if let Some(cursor_cells) = maybe_cursor_cells.as_ref() {
+                    let cursor_cell = Compositor::get_cell(cursor_cells, x, y)?;
+                    let maybe_fg =
+                        super::blender::Blender::extract_colour(cursor_cell.attrs().foreground());
+                    if let Some(fg) = maybe_fg {
+                        if fg != termwiz::color::SrgbaTuple(0.0, 0.0, 0.0, 1.0) {
+                            Compositor::blend_bg_colours_only(
+                                frame_cell,
+                                cursor_cell,
+                                animated_cursor_opacity,
+                            );
+                        }
+                    }
                 }
 
                 if text_contrast.enabled {
@@ -516,12 +550,12 @@ impl Renderer {
 
     /// If there's a shader frame then get it.
     fn get_shader_cells(
-        maybe_shader: Option<&mut crate::surface::Surface>,
+        maybe_shaders: Option<&crate::surface::Surface>,
         frame_size: (usize, usize),
-    ) -> Option<Vec<&mut [termwiz::cell::Cell]>> {
-        if let Some(shader) = maybe_shader {
+    ) -> Option<Vec<&[termwiz::cell::Cell]>> {
+        if let Some(shader) = maybe_shaders {
             if shader.surface.dimensions() == frame_size {
-                let shader_cells = shader.surface.screen_cells();
+                let shader_cells = shader.surface.get_screen_cells();
                 Some(shader_cells)
             } else {
                 tracing::debug!(
