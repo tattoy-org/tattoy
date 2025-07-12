@@ -400,14 +400,14 @@ impl GPU {
     }
 
     /// Update the `iCursor` variable for the shaders to consume.
-    pub fn update_cursor_position(&mut self, col: u16, row: u16) {
+    pub fn update_cursor_position(&mut self, col: u16, row: u16, scale: f32) {
         let image_height = self.variables.iResolution[1];
         let y: f32 = (row * 2).into();
         let cursor_center_x = f32::from(col);
         let cursor_center_y = image_height - y;
         self.variables.iCursor = [cursor_center_x, cursor_center_y];
 
-        self.update_cursor_position_ghostty_format(cursor_center_x, cursor_center_y);
+        self.update_cursor_position_ghostty_format(cursor_center_x, cursor_center_y, scale);
     }
 
     /// Ghostty shaders use a slightly different format.
@@ -419,8 +419,7 @@ impl GPU {
         clippy::as_conversions,
         reason = "There's no other `std` way to convert floats to integers"
     )]
-    fn update_cursor_position_ghostty_format(&mut self, x: f32, y: f32) {
-        let scale = 0.01;
+    fn update_cursor_position_ghostty_format(&mut self, x: f32, y: f32, scale: f32) {
         let cursor_width = 1.0 * scale;
         let cursor_height = 2.0 * scale;
         let cursor_top_left = (

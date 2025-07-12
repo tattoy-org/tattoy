@@ -19,6 +19,8 @@ pub(crate) struct Config {
     pub opacity: f32,
     /// The layer (or z-index) into which the shaders are rendered.
     pub layer: i16,
+    /// The scale of the cursor.
+    pub cursor_scale: f32,
     /// Whether to upload a pixel representation of the user's terminal. Useful for shader's that
     /// replace the text of the terminal, as Ghostty shaders do.
     pub upload_tty_as_pixels: bool,
@@ -36,6 +38,7 @@ impl Default for Config {
             .into(),
             opacity: 0.75,
             layer: -1,
+            cursor_scale: 1.0,
             upload_tty_as_pixels: false,
         }
     }
@@ -90,6 +93,16 @@ impl crate::tattoys::gpu::shaderer::Shaderer for AnimatedCursor {
             .await
             .animated_cursor
             .opacity
+    }
+
+    async fn get_cursor_scale(&self) -> f32 {
+        self.tattoy()
+            .state
+            .config
+            .read()
+            .await
+            .animated_cursor
+            .cursor_scale
     }
 
     /// Instantiate

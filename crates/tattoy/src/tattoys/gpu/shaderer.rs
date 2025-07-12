@@ -23,6 +23,16 @@ pub(crate) trait Shaderer: Sized {
     /// Get the current configured opacity for the tattoy.
     async fn get_opacity(&self) -> f32;
 
+    /// Get the current configured cursor scale for the tattoy.
+    #[expect(
+        clippy::allow_attributes,
+        reason = "The lint behaves differently on CI"
+    )]
+    #[allow(clippy::unused_async, reason = "It's a default implementation")]
+    async fn get_cursor_scale(&self) -> f32 {
+        1.0
+    }
+
     /// Instantiate
     async fn new(
         output_channel: tokio::sync::mpsc::Sender<crate::run::FrameUpdate>,
@@ -142,8 +152,9 @@ pub(crate) trait Shaderer: Sized {
     /// Tick the render
     async fn render(&mut self) -> Result<()> {
         let cursor = self.tattoy().screen.surface.cursor_position();
+        let cursor_scale = self.get_cursor_scale().await;
         self.gpu()
-            .update_cursor_position(cursor.0.try_into()?, cursor.1.try_into()?);
+            .update_cursor_position(cursor.0.try_into()?, cursor.1.try_into()?, cursor_scale);
 
         self.tattoy_mut().initialise_surface();
         self.tattoy_mut().opacity = self.get_opacity().await;

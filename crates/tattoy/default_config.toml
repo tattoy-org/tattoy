@@ -94,6 +94,14 @@ layer = -1
 path = "shaders/cursors/smear.glsl"
 # See same config setting in `[shader]` block.
 upload_tty_as_pixels = false
+# The scale of the cursor. Non-Tattoy based cursor shaders are written for cursors that are
+# rendered with lots of pixels. Whereas the number of "pixels" in a Tattoy cursor is just 2,
+# ie: "▀" and "▄". Imagine if a cursor shader had a design where it adds a single pixel
+# border to the cursor. On say a 30x60 pixel cursor, that border would look quite good. But
+# on Tattoy, that single "pixel" border suddenly makes the cursor 3 times the size! Therefore
+# by default we set the cursor size to 0.0 to avoid this oversizing. However of course, not
+# all cursor shaders will have this problem, so it may be useful to play with this value.
+cursor_scale = 0.0
 
 [bg_command]
 enabled = false
