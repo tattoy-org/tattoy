@@ -248,7 +248,7 @@ impl<'cell> Blender<'cell> {
 #[cfg(test)]
 mod test {
 
-    use super::*;
+    use shadow_terminal::termwiz;
 
     async fn make_renderer() -> crate::renderer::Renderer {
         let (protocol_tx, _) = tokio::sync::broadcast::channel(1024);
@@ -331,6 +331,33 @@ mod test {
                 termwiz::color::SrgbaTuple(0.6666667, 0.0, 0.0, 1.0)
             )
         );
+    }
+
+    #[tokio::test]
+    async fn blending_text_preserves_attributes() {
+        let mut renderer = make_renderer().await;
+        let mut tattoy_below = crate::surface::Surface::new("below".into(), 1, 1, 1, 1.0);
+        tattoy_below.add_text(0, 0, "a".into(), None, None);
+        renderer
+            .tattoys
+            .insert(tattoy_below.id.clone(), tattoy_below);
+
+        let mut tattoy_above = crate::surface::Surface::new("above".into(), 1, 1, 2, 1.0);
+        tattoy_above
+            .surface
+            .add_change(shadow_terminal::wezterm_term::AttributeChange::Reverse(
+                true,
+            ));
+        tattoy_above.add_text(0, 0, "x".into(), Some((0.0, 0.0, 0.0, 0.5)), None);
+        renderer
+            .tattoys
+            .insert(tattoy_above.id.clone(), tattoy_above);
+
+        renderer.composite().await.unwrap();
+        let cell = &renderer.frame.screen_cells()[0][0];
+
+        assert_eq!(cell.str(), "x");
+        assert!(cell.attrs().reverse());
     }
 
     #[tokio::test]
