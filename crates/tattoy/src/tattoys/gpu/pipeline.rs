@@ -45,7 +45,7 @@ pub struct Variables {
     /// The colour of the cursor before it moved to its new position.
     iPreviousCursorColor: [f32; 4],
 
-    /// The transition point of the animated cursor.
+    /// The time at which the animated cursor last changed.
     iTimeCursorChange: f32,
     /// Padding.
     _padding3: [u32; 3],
@@ -400,14 +400,14 @@ impl GPU {
     }
 
     /// Update the `iCursor` variable for the shaders to consume.
-    pub fn update_cursor_position(&mut self, col: u16, row: u16, scale: f32) {
+    pub fn update_cursor(&mut self, col: u16, row: u16, colour: [f32; 4], scale: f32) {
         let image_height = self.variables.iResolution[1];
         let y: f32 = (row * 2).into();
         let cursor_center_x = f32::from(col);
         let cursor_center_y = image_height - y;
         self.variables.iCursor = [cursor_center_x, cursor_center_y];
 
-        self.update_cursor_position_ghostty_format(cursor_center_x, cursor_center_y, scale);
+        self.update_cursor_ghostty_format(cursor_center_x, cursor_center_y, colour, scale);
     }
 
     /// Ghostty shaders use a slightly different format.
@@ -419,7 +419,7 @@ impl GPU {
         clippy::as_conversions,
         reason = "There's no other `std` way to convert floats to integers"
     )]
-    fn update_cursor_position_ghostty_format(&mut self, x: f32, y: f32, scale: f32) {
+    fn update_cursor_ghostty_format(&mut self, x: f32, y: f32, colour: [f32; 4], scale: f32) {
         let cursor_width = 1.0 * scale;
         let cursor_height = 2.0 * scale;
         let cursor_top_left = (
@@ -452,6 +452,8 @@ impl GPU {
             self.variables.iPreviousCursor = self.variables.iCurrentCursor;
             self.variables.iCurrentCursor = new_position_and_size;
         }
+
+        self.variables.iCurrentCursorColor = colour;
     }
 
     /// Tick the render

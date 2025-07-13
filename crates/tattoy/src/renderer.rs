@@ -494,15 +494,8 @@ impl Renderer {
             None
         };
 
-        let maybe_cursor_cells = if let Some(cursor_tattoy) = self.tattoys.get("animated_cursor") {
-            if cursor_tattoy.layer == -1 {
-                Self::get_shader_cells(self.tattoys.get("animated_cursor"), frame_size)
-            } else {
-                None
-            }
-        } else {
-            None
-        };
+        let maybe_cursor_cells =
+            Self::get_shader_cells(self.tattoys.get("animated_cursor"), frame_size);
 
         let is_rendering = *self.state.is_rendering_enabled.read().await;
         let animated_cursor_opacity = self.state.config.read().await.animated_cursor.opacity;
@@ -525,7 +518,7 @@ impl Renderer {
                     let maybe_fg =
                         super::blender::Blender::extract_colour(cursor_cell.attrs().foreground());
                     if let Some(fg) = maybe_fg {
-                        if fg != termwiz::color::SrgbaTuple(0.0, 0.0, 0.0, 1.0) {
+                        if fg != crate::tattoys::animated_cursor::DEFAULT_PIXEL_COLOUR {
                             Compositor::blend_bg_colours_only(
                                 frame_cell,
                                 cursor_cell,

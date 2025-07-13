@@ -151,10 +151,16 @@ pub(crate) trait Shaderer: Sized {
 
     /// Tick the render
     async fn render(&mut self) -> Result<()> {
-        let cursor = self.tattoy().screen.surface.cursor_position();
+        let cursor_position = self.tattoy().screen.surface.cursor_position();
+        let cursor_colour = self.get_cursor_colour(cursor_position.0, cursor_position.1)?;
+
         let cursor_scale = self.get_cursor_scale().await;
-        self.gpu()
-            .update_cursor_position(cursor.0.try_into()?, cursor.1.try_into()?, cursor_scale);
+        self.gpu().update_cursor(
+            cursor_position.0.try_into()?,
+            cursor_position.1.try_into()?,
+            cursor_colour,
+            cursor_scale,
+        );
 
         self.tattoy_mut().initialise_surface();
         self.tattoy_mut().opacity = self.get_opacity().await;
@@ -180,5 +186,31 @@ pub(crate) trait Shaderer: Sized {
         self.tattoy_mut().send_output().await?;
 
         Ok(())
+    }
+
+    /// Get the current colour of the cursor.
+    fn get_cursor_colour(&mut self, x: usize, y: usize) -> Result<[f32; 4]> {
+        let cells = self.tattoy().screen.surface.get_screen_cells();
+        if cells.is_empty() {
+            return Ok([0.0, 0.0, 0.0, 0.0]);
+        }
+
+        let cursor_colour_attribute = cells
+            .get(y)
+            .context(format!(
+                "Couldn't get y coordinate ({y}) for cursor cell. Line count: {}",
+                cells.len()
+            ))?
+            .get(x)
+            .context("Couldn't get x coordinate for cursor cell")?
+            .attrs()
+            .foreground();
+
+        let colour: [f32; 4] = crate::blender::Blender::extract_colour(cursor_colour_attribute)
+            .context("Couldn't get colour of cursor cell")?
+            .to_tuple_rgba()
+            .into();
+
+        Ok(colour)
     }
 }
