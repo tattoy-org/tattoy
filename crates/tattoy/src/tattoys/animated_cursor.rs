@@ -2,10 +2,17 @@
 
 use color_eyre::eyre::Result;
 
+use shadow_terminal::termwiz;
+
 use crate::tattoys::tattoyer::Tattoyer;
 
 /// The size of the cursor in units of terminal UTF8 half blocl "pixels".
 pub const CURSOR_DIMENSIONS_REAL: (f32, f32) = (1.0, 2.0);
+
+/// The colour of a shader pixel that hasn't had anything done to it. So that we can later make
+/// this pixels be transparen.
+pub const DEFAULT_PIXEL_COLOUR: termwiz::color::SrgbaTuple =
+    termwiz::color::SrgbaTuple(0.0, 0.0, 0.0, 1.0);
 
 /// All the user config for the shader tattoy.
 #[derive(serde::Deserialize, Debug, Clone)]
