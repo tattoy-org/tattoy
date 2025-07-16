@@ -63,6 +63,12 @@ pub(crate) struct SharedState {
     pub is_logging: tokio::sync::RwLock<bool>,
     /// Is Tattoy rendering anything to the terminal?
     pub is_rendering_enabled: tokio::sync::RwLock<bool>,
+    // TODO: I tried adding the whole palette here, but it wasn't straightforward so I've just put
+    // the background for now.
+    //
+    /// The default background colour from the palette. This is used when compositing or blending
+    /// needs a base colour but it only has an ANSI default background colour.
+    pub default_background: tokio::sync::RwLock<termwiz::color::SrgbaTuple>,
 }
 
 impl SharedState {
@@ -86,9 +92,9 @@ impl SharedState {
             is_alternate_screen: RwLock::default(),
             pty_sequence: RwLock::default(),
             is_logging: RwLock::default(),
-            is_rendering_enabled: RwLock::default(),
+            is_rendering_enabled: RwLock::new(true),
+            default_background: RwLock::default(),
         };
-        *state.is_rendering_enabled.write().await = true;
 
         state.set_tty_size(width, height).await;
         Ok(Arc::new(state))

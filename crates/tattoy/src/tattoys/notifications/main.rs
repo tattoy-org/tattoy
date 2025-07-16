@@ -35,7 +35,7 @@ impl Notifications {
         palette: crate::palette::converter::Palette,
     ) -> Result<Self> {
         crate::config::main::Config::load_palette(std::sync::Arc::clone(&state)).await?;
-        let text_colour = palette.default_foreground_colour();
+        let text_colour = palette.foreground_colour();
         let opacity = state.config.read().await.notifications.opacity;
         let tattoy = crate::tattoys::tattoyer::Tattoyer::new(
             "notifications".to_owned(),

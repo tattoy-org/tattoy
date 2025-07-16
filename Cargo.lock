@@ -3157,9 +3157,9 @@ dependencies = [
 
 [[package]]
 name = "shadow-terminal"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6482e31dea39e52c7058384f89fe0b4b054b1216d4103218ae7295d9a9c716f3"
+checksum = "b74a69ee73e11e43fed291b70ff7acad7f10138c49a37309a340207c20a7fd37"
 dependencies = [
  "portable-pty",
  "schemars",
@@ -3443,9 +3443,9 @@ dependencies = [
 
 [[package]]
 name = "tattoy-termwiz"
-version = "0.24.0-fork.1"
+version = "0.24.0-fork.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4272faed5f468043d172225860e1adfc0c896ed654c2ab7e1e21e0665da6c48a"
+checksum = "a4baa577b33d8e5f1fc6efce63ea148f2e668f097294d39140c5de08e18e9c9c"
 dependencies = [
  "anyhow",
  "bitflags 2.8.0",
@@ -3585,9 +3585,9 @@ dependencies = [
 
 [[package]]
 name = "tattoy-wezterm-surface"
-version = "0.1.0-fork.1"
+version = "0.1.0-fork.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b379124000ec9541ed14d4dc368cfe2ed4336ff1c22a428b083b66ca60d254b4"
+checksum = "e37ba079e943bb37ca1ca6e179674113aa29b68341d2421922c02962bac81fdb"
 dependencies = [
  "bitflags 2.8.0",
  "fancy-regex",
@@ -3609,9 +3609,9 @@ dependencies = [
 
 [[package]]
 name = "tattoy-wezterm-term"
-version = "0.1.0-fork.4"
+version = "0.1.0-fork.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f03b88ca51f2fbb449d7b0e35f01b220f68ea5748d6380fc698afb096d0e0509"
+checksum = "7f3678674adc87f210ec01e2134e1972d6b0bd194bf82242f7e7beee3ae9dbd8"
 dependencies = [
  "anyhow",
  "bitflags 1.3.2",

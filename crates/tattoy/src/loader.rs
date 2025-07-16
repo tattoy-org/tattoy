@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use color_eyre::eyre::Result;
 
-use crate::run::FrameUpdate;
+use crate::{run::FrameUpdate, tattoys::gpu::shaderer::Shaderer as _};
 
 /// Start the main loader thread
 #[expect(clippy::too_many_lines, reason = "It's mostly repetitive")]
@@ -72,7 +72,17 @@ pub(crate) fn start_tattoys(
                 || state.config.read().await.shader.enabled
             {
                 tracing::info!("Starting 'shaders' tattoy...");
-                tattoy_futures.spawn(crate::tattoys::shaders::main::Shaders::start(
+                tattoy_futures.spawn(crate::tattoys::shader::Shaders::start(
+                    output.clone(),
+                    Arc::clone(&state),
+                ));
+            }
+
+            if enabled_tattoys.contains(&"animated_cursor".to_owned())
+                || state.config.read().await.animated_cursor.enabled
+            {
+                tracing::info!("Starting 'animated_cursor' tattoy...");
+                tattoy_futures.spawn(crate::tattoys::animated_cursor::AnimatedCursor::start(
                     output.clone(),
                     Arc::clone(&state),
                 ));

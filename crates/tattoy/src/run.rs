@@ -26,7 +26,6 @@ pub(crate) enum FrameUpdate {
 }
 
 /// Commands to control the various tasks/threads
-#[non_exhaustive]
 #[derive(Clone, Debug)]
 pub(crate) enum Protocol {
     /// Output from the PTY.
@@ -75,6 +74,9 @@ pub(crate) async fn run(state_arc: &std::sync::Arc<SharedState>) -> Result<()> {
     if !palette_config_exists {
         crate::palette::main::get_palette(state_arc).await?;
     }
+
+    let palette = crate::config::main::Config::load_palette(Arc::clone(state_arc)).await?;
+    *state_arc.default_background.write().await = palette.background_colour();
 
     let input_thread_handle = RawInput::start(protocol_tx.clone());
 
@@ -310,6 +312,7 @@ async fn setup_logging(cli_args: CliArgs, state: &std::sync::Arc<SharedState>) -
             .add_directive(format!("shadow_terminal={level_as_string}").parse()?)
             .add_directive(format!("tattoy={level_as_string}").parse()?)
             .add_directive(format!("tests={level_as_string}").parse()?)
+            .add_directive("tattoy_wezterm_term=off".parse()?)
     };
 
     let logfile_layer = tracing_subscriber::fmt::layer()

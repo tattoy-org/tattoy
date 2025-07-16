@@ -64,59 +64,59 @@ impl Surface {
     /// *whilst retaining the ANSI-coded default background colour*.
     pub fn add_pixel(&mut self, x: usize, y: usize, colour: Colour) -> Result<()> {
         let (col, row) = self.coords_to_tty(x, y)?;
-        self.surface.add_change(TermwizChange::CursorPosition {
-            x: TermwizPosition::Absolute(col),
-            y: TermwizPosition::Absolute(row),
-        });
+        let colour_attribute = Self::make_colour_attribute(colour);
 
-        let cell = self.get_cell_at(col, row)?;
+        let mut cells = self.surface.screen_cells();
+        let cell = cells
+            .get_mut(row)
+            .context("No cell row")?
+            .get_mut(col)
+            .context("No cell column")?;
         let is_empty_upper = cell.str() != "▀";
         let is_upper_half = y.rem_euclid(2) == 0;
         let is_lower_half = !is_upper_half;
         let is_adding_to_bottom_of_empty_upper = is_empty_upper && is_lower_half;
 
-        let mut fg_colour = if is_upper_half {
-            Self::make_fg_colour(colour)
+        let text = if is_adding_to_bottom_of_empty_upper {
+            '▄'
         } else {
-            TermwizChange::Attribute(termwiz::cell::AttributeChange::Foreground(
-                cell.attrs().foreground(),
-            ))
+            '▀'
         };
+        // TODO: It'd be nice to add a method to `termwiz::cell::Cell` that allowed setting the
+        // cell's text value. It would save this little scratch and clone dance.
+        let mut scratch = termwiz::cell::Cell::new(text, cell.attrs().clone());
+
+        let mut is_set_foreground_colour = is_upper_half;
 
         #[expect(
             clippy::useless_let_if_seq,
             reason = "I think the verbosity is useful here"
         )]
-        let mut bg_colour = if is_upper_half {
-            TermwizChange::Attribute(termwiz::cell::AttributeChange::Background(
-                cell.attrs().background(),
-            ))
-        } else {
-            Self::make_bg_colour(colour)
-        };
+        let mut is_set_background_colour = !is_upper_half;
 
         if is_adding_to_bottom_of_empty_upper {
-            fg_colour = Self::make_fg_colour(colour);
-            bg_colour = TermwizChange::Attribute(termwiz::cell::AttributeChange::Background(
-                cell.attrs().background(),
-            ));
+            is_set_foreground_colour = true;
+            is_set_background_colour = false;
         }
 
         // This is when we add a pixel to a cell that only has a lower-half colour.
         let is_converting_lower_to_full = is_upper_half && cell.str() == "▄";
         if is_converting_lower_to_full {
-            fg_colour = Self::make_fg_colour(colour);
-            bg_colour = TermwizChange::Attribute(termwiz::cell::AttributeChange::Background(
-                cell.attrs().foreground(),
-            ));
+            is_set_foreground_colour = true;
+            is_set_background_colour = false;
+            scratch
+                .attrs_mut()
+                .set_background(cell.attrs().foreground());
         }
 
-        self.surface.add_changes(vec![fg_colour, bg_colour]);
-        if is_adding_to_bottom_of_empty_upper {
-            self.surface.add_change("▄");
-        } else {
-            self.surface.add_change("▀");
+        if is_set_background_colour {
+            scratch.attrs_mut().set_background(colour_attribute);
         }
+        if is_set_foreground_colour {
+            scratch.attrs_mut().set_foreground(colour_attribute);
+        }
+
+        *cell = scratch;
 
         Ok(())
     }
@@ -191,18 +191,6 @@ impl Surface {
             bail!("Tried to add pixel to row: {row}")
         }
         Ok((col, row))
-    }
-
-    /// Get thell at the given column and row.
-    fn get_cell_at(&mut self, col: usize, row: usize) -> Result<termwiz::cell::Cell> {
-        let cells = self.surface.screen_cells();
-        let cell = cells
-            .get(row)
-            .context("No cell row")?
-            .get(col)
-            .context("No cell column")?;
-        // TODO: avoid this clone!
-        Ok(cell.clone())
     }
 }
 

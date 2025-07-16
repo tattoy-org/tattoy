@@ -207,14 +207,14 @@ impl Plugin {
                     crate::blender::Blender::extract_colour(cell.attrs().background());
                 let bg = match bg_attribute {
                     Some(attribute) => attribute.to_tuple_rgba(),
-                    None => self.palette.default_background_colour().into(),
+                    None => self.palette.background_colour().into(),
                 };
 
                 let fg_attribute =
                     crate::blender::Blender::extract_colour(cell.attrs().foreground());
                 let fg = match fg_attribute {
                     Some(attribute) => attribute.to_tuple_rgba(),
-                    None => self.palette.default_foreground_colour().into(),
+                    None => self.palette.foreground_colour().into(),
                 };
 
                 cells.push(

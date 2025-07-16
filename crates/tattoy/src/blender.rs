@@ -7,16 +7,9 @@ use palette::{
 };
 use shadow_terminal::termwiz;
 
-/// This is the default colour for when an opaque cell is over a "blank" cell.
-///
-/// In Tattoy, a blank cell is any cell that has the default terminal colour. Most terminals use a
-/// dark theme, so let's say that, when alpha blending, the default colour is pure black.
-/// TODO: support light theme terminals.
-pub const DEFAULT_COLOUR: termwiz::color::SrgbaTuple =
-    termwiz::color::SrgbaTuple(0.0, 0.0, 0.0, 1.0);
-
 /// Whether we're acting on a foreground or background attribute.
-enum Kind {
+#[derive(Debug)]
+pub(crate) enum Kind {
     /// A foreground attribute.
     Foreground,
     /// A background attribute.
@@ -38,14 +31,9 @@ impl<'cell> Blender<'cell> {
     /// Instantiate
     pub const fn new(
         cell: &'cell mut termwiz::cell::Cell,
-        maybe_default_bg_colour: Option<termwiz::color::SrgbaTuple>,
+        default_bg_colour: termwiz::color::SrgbaTuple,
         cell_above_opacity: f32,
     ) -> Self {
-        let default_bg_colour = match maybe_default_bg_colour {
-            Some(colour) => colour,
-            None => DEFAULT_COLOUR,
-        };
-
         Self {
             cell,
             default_colour: default_bg_colour,
@@ -80,16 +68,13 @@ impl<'cell> Blender<'cell> {
     }
 
     /// Blend this cell's foreground colour with a new colour.
-    fn blend(&mut self, kind: &Kind, incoming_colour: termwiz::color::SrgbaTuple) {
+    pub fn blend(&mut self, kind: &Kind, incoming_colour: termwiz::color::SrgbaTuple) {
         let this_colour_attribute = match kind {
             Kind::Foreground => self.cell.attrs().foreground(),
             Kind::Background => self.cell.attrs().background(),
         };
 
-        let colour = match Self::extract_colour(this_colour_attribute) {
-            Some(raw_colour) => raw_colour,
-            None => self.default_colour,
-        };
+        let colour = Self::extract_colour(this_colour_attribute).unwrap_or(self.default_colour);
 
         let blended_colour = colour.interpolate(
             incoming_colour,
@@ -248,7 +233,7 @@ impl<'cell> Blender<'cell> {
 #[cfg(test)]
 mod test {
 
-    use super::*;
+    use shadow_terminal::termwiz;
 
     async fn make_renderer() -> crate::renderer::Renderer {
         let (protocol_tx, _) = tokio::sync::broadcast::channel(1024);
@@ -260,6 +245,7 @@ mod test {
             width: 1,
             height: 1,
             is_cursor_visible: false,
+            default_bg_colour: termwiz::color::SrgbaTuple(0.0, 0.0, 0.0, 1.0),
             ..crate::renderer::Renderer::new(state, false).await.unwrap()
         };
         *renderer.state.is_rendering_enabled.write().await = true;
@@ -331,6 +317,33 @@ mod test {
                 termwiz::color::SrgbaTuple(0.6666667, 0.0, 0.0, 1.0)
             )
         );
+    }
+
+    #[tokio::test]
+    async fn blending_text_preserves_attributes() {
+        let mut renderer = make_renderer().await;
+        let mut tattoy_below = crate::surface::Surface::new("below".into(), 1, 1, 1, 1.0);
+        tattoy_below.add_text(0, 0, "a".into(), None, None);
+        renderer
+            .tattoys
+            .insert(tattoy_below.id.clone(), tattoy_below);
+
+        let mut tattoy_above = crate::surface::Surface::new("above".into(), 1, 1, 2, 1.0);
+        tattoy_above
+            .surface
+            .add_change(shadow_terminal::wezterm_term::AttributeChange::Reverse(
+                true,
+            ));
+        tattoy_above.add_text(0, 0, "x".into(), Some((0.0, 0.0, 0.0, 0.5)), None);
+        renderer
+            .tattoys
+            .insert(tattoy_above.id.clone(), tattoy_above);
+
+        renderer.composite().await.unwrap();
+        let cell = &renderer.frame.screen_cells()[0][0];
+
+        assert_eq!(cell.str(), "x");
+        assert!(cell.attrs().reverse());
     }
 
     #[tokio::test]

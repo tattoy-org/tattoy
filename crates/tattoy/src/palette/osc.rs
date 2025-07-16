@@ -9,6 +9,19 @@ use tokio::io::{AsyncReadExt as _, AsyncWriteExt as _};
 /// The amount of time in seconds to wait for a response from the host terminal emulator.
 const WAIT_FOR_RESPONSE_TIMEOUT: u64 = 1;
 
+/// The query code for getting the palette index RGB colour from the host terminal.
+const OSC_PALETTE_QUERY: u8 = 4;
+
+/// The query code for getting the foreground RGB colour from the host terminal.
+const OSC_FOREGROUND_QUERY: u8 = 10;
+
+/// The query code for getting the background RGB colour from the host terminal.
+const OSC_BACKGROUND_QUERY: u8 = 11;
+
+/// The number of colours we need to parse. 256 from the palette and then the background colour and
+/// the foreground colour.
+const REQUIRED_COLOURS: u16 = 258;
+
 /// `OSC`
 pub(crate) struct OSC;
 
@@ -41,11 +54,37 @@ impl OSC {
             .await?;
 
         let mut command = String::new();
-        for index in 0..255u8 {
+        for index in 0..=255u8 {
             command.extend(
-                format!("{}]4;{index};?{}", crate::utils::ESCAPE, crate::utils::BELL).chars(),
+                format!(
+                    "{}]{};{index};?{}",
+                    crate::utils::ESCAPE,
+                    OSC_PALETTE_QUERY,
+                    crate::utils::BELL
+                )
+                .chars(),
             );
         }
+
+        command.extend(
+            format!(
+                "{}]{};?{}",
+                crate::utils::ESCAPE,
+                OSC_FOREGROUND_QUERY,
+                crate::utils::BELL
+            )
+            .chars(),
+        );
+        command.extend(
+            format!(
+                "{}]{};?{}",
+                crate::utils::ESCAPE,
+                OSC_BACKGROUND_QUERY,
+                crate::utils::BELL
+            )
+            .chars(),
+        );
+
         tty.write_all(command.as_bytes()).await?;
         tty.flush().await?;
 
@@ -60,6 +99,7 @@ impl OSC {
         let mut reader = tokio::io::BufReader::new(tty);
         let mut all = Vec::new();
         let mut attempts = 0u16;
+        let mut found_count = 0;
 
         loop {
             let mut buffer = vec![0; buffer_size];
@@ -70,8 +110,12 @@ impl OSC {
             .await;
             attempts += 1;
             if result.is_err() || attempts > 300 {
-                let message = "Timed out waiting for response from controlling terminal \
-                    when querying for palette colour values";
+                let message = format!(
+                    "Timed out waiting for response from controlling terminal \
+                    when querying for palette colour values. Or not all colours could \
+                    be parsed ({REQUIRED_COLOURS} colours needed only {found_count} found).
+                "
+                );
                 tracing::warn!(message);
                 color_eyre::eyre::bail!(message);
             }
@@ -86,9 +130,10 @@ impl OSC {
 
             match Self::parse_colours(response) {
                 Ok(colours) => {
-                    if colours.len() == 255 {
+                    if colours.len() == usize::from(REQUIRED_COLOURS) {
                         return Ok(colours);
                     }
+                    found_count = colours.len();
                 }
                 Err(error) => tracing::debug!("Potential error parsing OSC codes: {error:?}"),
             }
@@ -97,12 +142,16 @@ impl OSC {
 
     /// Parse the OSC response for palette colours.
     fn parse_colours(response: &str) -> Result<super::main::PaletteHashMap> {
+        let palette_signature = format!("ESC]{OSC_PALETTE_QUERY};");
+        let foreground_signature = format!("ESC]{OSC_FOREGROUND_QUERY};");
+        let background_signature = format!("ESC]{OSC_BACKGROUND_QUERY};");
         let mut palette = super::main::PaletteHashMap::new();
-        for sequence in response.split("ESC]4;") {
+
+        for sequence in response.split(&palette_signature) {
             if sequence.is_empty() {
                 continue;
             }
-            tracing::trace!("Parsing OSC sequence: {sequence}");
+            tracing::trace!("Parsing OSC 4 sequence: {sequence}");
 
             let mut index_and_colour = sequence.split(';');
             let index = index_and_colour
@@ -113,35 +162,60 @@ impl OSC {
                 .next()
                 .context(format!("Colour not found in OSC sequence: {sequence}"))?;
 
-            let mut channels = colourish.split('/');
-            let red = Self::get_last_chars(
-                channels
-                    .next()
-                    .context(format!("Couldn't get red from OSC response: {colourish:?}"))?,
-                2,
-            );
-            let green = Self::get_last_chars(
-                channels.next().context(format!(
-                    "Couldn't get green from OSC response: {colourish:?}"
-                ))?,
-                2,
-            );
-            let blue = Self::get_first_chars(
-                channels.next().context(format!(
-                    "Couldn't get blue from OSC response: {colourish:?}"
-                ))?,
-                2,
-            );
-
-            let colour: super::main::PaletteColour = (
-                u8::from_str_radix(&red, 16)?,
-                u8::from_str_radix(&green, 16)?,
-                u8::from_str_radix(&blue, 16)?,
-            );
+            let colour = Self::parse_rgb(colourish)?;
             palette.insert(index, colour);
         }
 
+        for sequence in response.split(&foreground_signature) {
+            if sequence.is_empty() || !sequence.starts_with("rgb") {
+                continue;
+            }
+            tracing::trace!("Parsing OSC 10 sequence: {sequence}");
+            let colour = Self::parse_rgb(sequence)?;
+            palette.insert("foreground".to_owned(), colour);
+            tracing::trace!("Found foreground colour: {colour:?}");
+        }
+
+        for sequence in response.split(&background_signature) {
+            if sequence.is_empty() || !sequence.starts_with("rgb") {
+                continue;
+            }
+            tracing::trace!("Parsing OSC 11 sequence: {sequence}");
+            let colour = Self::parse_rgb(sequence)?;
+            palette.insert("background".to_owned(), colour);
+            tracing::trace!("Found background colour: {colour:?}");
+        }
+
         Ok(palette)
+    }
+
+    /// Parse something like, "rgb:dada/dada/dadaBELL" into a RGB palette colour.
+    fn parse_rgb(colourish: &str) -> Result<super::main::PaletteColour> {
+        let mut channels = colourish.split('/');
+        let red = Self::get_last_chars(
+            channels
+                .next()
+                .context(format!("Couldn't get red from OSC response: {colourish:?}"))?,
+            2,
+        );
+        let green = Self::get_last_chars(
+            channels.next().context(format!(
+                "Couldn't get green from OSC response: {colourish:?}"
+            ))?,
+            2,
+        );
+        let blue = Self::get_first_chars(
+            channels.next().context(format!(
+                "Couldn't get blue from OSC response: {colourish:?}"
+            ))?,
+            2,
+        );
+
+        Ok((
+            u8::from_str_radix(&red, 16)?,
+            u8::from_str_radix(&green, 16)?,
+            u8::from_str_radix(&blue, 16)?,
+        ))
     }
 
     /// Get the first x characters from a string.
