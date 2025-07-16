@@ -66,12 +66,6 @@ layer = -10
 # used for other purposes such as defining the foreground colour of the terminal's text,
 # see `render_shader_colours_to_text`.
 render = true
-# It can be useful to disable this for certain GUI terminal shaders (such as Ghostty shaders)
-# that also take responsibility for rendering terminal text. Tattoy can only send a crude 
-# representation of terminal text as 2 pixels per character, which is sometimes desirable
-# when the shader uses the terminal to inform the output of the shader, but it can also cause
-# an unnesceray blocky effect when the shader doesn't use the terminal colours.
-upload_tty_as_pixels = true
 # Use each "cell" of the shader to set the corresponding text cell's foreground colour.
 # This is most likely desirable in conjunction with the `render` option, so that the shader
 # is only visible via the terminal's text.
@@ -81,14 +75,11 @@ render_shader_colours_to_text = false
 path = "shaders/soft_shadows.glsl"
 
 [animated_cursor]
-enabled = true
+enabled = false
 opacity = 1.0
-layer = -1
 # Path to the cursor shader on your local filesystem. Is relative to the root of Tattoy's
 # config directory.
-path = "shaders/cursors/smear.glsl"
-# See same config setting in `[shader]` block.
-upload_tty_as_pixels = false
+path = "shaders/cursors/smear_fade.glsl"
 # The scale of the cursor. Non-Tattoy based cursor shaders are written for cursors that are
 # rendered with lots of pixels. Whereas the number of "pixels" in a Tattoy cursor is just 2,
 # ie: "▀" and "▄". Imagine if a cursor shader had a design where it adds a single pixel

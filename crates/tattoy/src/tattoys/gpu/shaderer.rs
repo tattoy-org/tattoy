@@ -5,17 +5,23 @@ use futures_util::FutureExt as _;
 
 /// Common logic for tattoys that render shaders.
 pub(crate) trait Shaderer: Sized {
-    /// Return a immutable reference to the Tattoyer helper.
+    /// Return an immutable reference to the Tattoyer helper.
     fn tattoy(&self) -> &crate::tattoys::tattoyer::Tattoyer;
 
     /// Return a mutable reference to the Tattoyer helper.
     fn tattoy_mut(&mut self) -> &mut crate::tattoys::tattoyer::Tattoyer;
 
+    /// Returns an immutable reference to the GPU pipeline manager.
+    fn gpu(&self) -> &super::pipeline::GPU;
+
     /// Returns a mutable reference to the GPU pipeline manager.
-    fn gpu(&mut self) -> &mut super::pipeline::GPU;
+    fn gpu_mut(&mut self) -> &mut super::pipeline::GPU;
 
     /// Is the config for this tattoy set to upload the TTY as pixels?
     async fn is_upload_tty_as_pixels(&self) -> bool;
+
+    /// Should the character colours be uploaded as part of the TTY pixels?
+    fn is_upload_tty_with_characters(&self) -> bool;
 
     /// Get the current configured layer for the tattoy.
     async fn get_layer(&self) -> i16;
@@ -129,7 +135,7 @@ pub(crate) trait Shaderer: Sized {
                     self.upload_tty_as_pixels().await?;
                 }
 
-                self.gpu().handle_protocol_message(&message).await?;
+                self.gpu_mut().handle_protocol_message(&message).await?;
                 self.tattoy_mut().handle_common_protocol_messages(message)?;
             }
             Err(error) => tracing::error!("Receiving protocol message: {error:?}"),
@@ -141,21 +147,40 @@ pub(crate) trait Shaderer: Sized {
     /// Upload the TTY content as coloured pixels.
     async fn upload_tty_as_pixels(&mut self) -> Result<()> {
         let is_upload_tty_as_pixels = self.is_upload_tty_as_pixels().await;
-        let image = self
+        let is_upload_tty_with_characters = self.is_upload_tty_with_characters();
+        self.gpu_mut().tty_pixels = self
             .tattoy_mut()
-            .get_tty_image_for_upload(is_upload_tty_as_pixels)?;
-        self.gpu().update_ichannel_texture_data(&image);
+            .get_tty_image_for_upload(is_upload_tty_as_pixels, is_upload_tty_with_characters)
+            .await?;
+        self.gpu_mut().update_ichannel_texture_data();
 
         Ok(())
     }
 
     /// Tick the render
     async fn render(&mut self) -> Result<()> {
+        let rendered_pixels = self.gpu_mut().render().await?;
+
+        if self.is_upload_tty_as_pixels().await {
+            if self.gpu().tty_pixels.dimensions().1 == 0 {
+                tracing::trace!("Not building shader layer because TTY pixels aren't ready");
+                return Ok(());
+            }
+
+            if self.gpu().tty_pixels.dimensions() != rendered_pixels.dimensions() {
+                tracing::trace!(
+                    "Not building shader layer because TTY pixels aren't the same dimensions \
+                    as the GPU-rendered pixels."
+                );
+                return Ok(());
+            }
+        }
+
         let cursor_position = self.tattoy().screen.surface.cursor_position();
         let cursor_colour = self.get_cursor_colour(cursor_position.0, cursor_position.1)?;
 
         let cursor_scale = self.get_cursor_scale().await;
-        self.gpu().update_cursor(
+        self.gpu_mut().update_cursor(
             cursor_position.0.try_into()?,
             cursor_position.1.try_into()?,
             cursor_colour,
@@ -165,27 +190,54 @@ pub(crate) trait Shaderer: Sized {
         self.tattoy_mut().initialise_surface();
         self.tattoy_mut().opacity = self.get_opacity().await;
         self.tattoy_mut().layer = self.get_layer().await;
-        let image = self.gpu().render().await?;
 
         let tty_height_in_pixels = u32::from(self.tattoy().height) * 2;
         for y in 0..tty_height_in_pixels {
             for x in 0..self.tattoy().width {
                 let offset_for_reversal = 1;
                 let y_reversed = tty_height_in_pixels - y - offset_for_reversal;
-                let pixel = image
-                    .get_pixel_checked(x.into(), y_reversed)
-                    .context(format!("Couldn't get pixel: {x}x{y_reversed}"))?
-                    .0;
 
-                self.tattoy_mut()
-                    .surface
-                    .add_pixel(x.into(), y.try_into()?, pixel.into())?;
+                let pixel_u8 = rendered_pixels
+                    .get_pixel_checked(x.into(), y_reversed)
+                    .context(format!("Couldn't get new pixel: {x}x{y_reversed}"))?
+                    .0;
+                let pixel = [
+                    f32::from(pixel_u8[0]) / 255.0,
+                    f32::from(pixel_u8[1]) / 255.0,
+                    f32::from(pixel_u8[2]) / 255.0,
+                    f32::from(pixel_u8[3]) / 255.0,
+                ];
+
+                if self.is_upload_tty_as_pixels().await {
+                    if self.are_pixels_different(x.into(), y_reversed, pixel_u8)? {
+                        self.tattoy_mut().surface.add_pixel(
+                            x.into(),
+                            y.try_into()?,
+                            pixel.into(),
+                        )?;
+                    }
+                } else {
+                    self.tattoy_mut()
+                        .surface
+                        .add_pixel(x.into(), y.try_into()?, pixel.into())?;
+                }
             }
         }
 
         self.tattoy_mut().send_output().await?;
 
         Ok(())
+    }
+
+    /// Compare the pixel before and after rendering.
+    fn are_pixels_different(&self, x: u32, y_reversed: u32, new_pixel: [u8; 4]) -> Result<bool> {
+        let old_pixel = self
+            .gpu()
+            .tty_pixels
+            .get_pixel_checked(x, y_reversed)
+            .context(format!("Couldn't get old pixel: {x}x{y_reversed}"))?
+            .0;
+        Ok(new_pixel != old_pixel)
     }
 
     /// Get the current colour of the cursor.

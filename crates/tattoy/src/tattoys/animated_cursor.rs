@@ -2,17 +2,14 @@
 
 use color_eyre::eyre::Result;
 
-use shadow_terminal::termwiz;
-
 use crate::tattoys::tattoyer::Tattoyer;
 
-/// The size of the cursor in units of terminal UTF8 half blocl "pixels".
+/// The size of the cursor in units of terminal UTF8 half block "pixels".
 pub const CURSOR_DIMENSIONS_REAL: (f32, f32) = (1.0, 2.0);
 
-/// The colour of a shader pixel that hasn't had anything done to it. So that we can later make
-/// this pixels be transparen.
-pub const DEFAULT_PIXEL_COLOUR: termwiz::color::SrgbaTuple =
-    termwiz::color::SrgbaTuple(0.0, 0.0, 0.0, 1.0);
+/// The animated cursor's layer is effectively something like -0.5. It renders between the
+/// foreground and background of the PTY layer.
+const LAYER: i16 = i16::MIN;
 
 /// All the user config for the shader tattoy.
 #[derive(serde::Deserialize, Debug, Clone)]
@@ -24,13 +21,8 @@ pub(crate) struct Config {
     pub path: std::path::PathBuf,
     /// The opacity of the rendered shader layer.
     pub opacity: f32,
-    /// The layer (or z-index) into which the shaders are rendered.
-    pub layer: i16,
     /// The scale of the cursor.
     pub cursor_scale: f32,
-    /// Whether to upload a pixel representation of the user's terminal. Useful for shader's that
-    /// replace the text of the terminal, as Ghostty shaders do.
-    pub upload_tty_as_pixels: bool,
 }
 
 impl Default for Config {
@@ -44,9 +36,7 @@ impl Default for Config {
             )
             .into(),
             opacity: 0.75,
-            layer: -1,
             cursor_scale: 1.0,
-            upload_tty_as_pixels: false,
         }
     }
 }
@@ -68,28 +58,24 @@ impl crate::tattoys::gpu::shaderer::Shaderer for AnimatedCursor {
         &mut self.tattoy
     }
 
-    fn gpu(&mut self) -> &mut super::gpu::pipeline::GPU {
+    fn gpu(&self) -> &super::gpu::pipeline::GPU {
+        &self.gpu
+    }
+
+    fn gpu_mut(&mut self) -> &mut super::gpu::pipeline::GPU {
         &mut self.gpu
     }
 
     async fn is_upload_tty_as_pixels(&self) -> bool {
-        self.tattoy
-            .state
-            .config
-            .read()
-            .await
-            .animated_cursor
-            .upload_tty_as_pixels
+        true
+    }
+
+    fn is_upload_tty_with_characters(&self) -> bool {
+        false
     }
 
     async fn get_layer(&self) -> i16 {
-        self.tattoy()
-            .state
-            .config
-            .read()
-            .await
-            .animated_cursor
-            .layer
+        LAYER
     }
 
     async fn get_opacity(&self) -> f32 {
@@ -127,12 +113,11 @@ impl crate::tattoys::gpu::shaderer::Shaderer for AnimatedCursor {
             state.protocol_tx.clone(),
         )
         .await?;
-        let layer = state.config.read().await.animated_cursor.layer;
         let opacity = state.config.read().await.animated_cursor.opacity;
         let tattoy = Tattoyer::new(
             "animated_cursor".to_owned(),
             state,
-            layer,
+            LAYER,
             opacity,
             output_channel,
         )

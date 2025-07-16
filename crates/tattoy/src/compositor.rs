@@ -43,6 +43,7 @@ impl Compositor {
     pub fn composite_fg_colour_only(
         base_cell: &mut termwiz::cell::Cell,
         cell_above: &termwiz::cell::Cell,
+        default_bg_colour: termwiz::color::SrgbaTuple,
     ) {
         if base_cell
             .str()
@@ -53,22 +54,36 @@ impl Compositor {
         }
 
         let mut draft = termwiz::cell::Cell::blank();
-        Self::composite_cells(&mut draft, cell_above, 1.0);
+        Self::composite_cells(&mut draft, cell_above, 1.0, default_bg_colour);
         let colour = draft.attrs().foreground();
         base_cell.attrs_mut().set_foreground(colour);
     }
 
-    /// Just blend the background colours.
-    pub fn blend_bg_colours_only(
+    /// Just blend the pixel(s) with the background colour.
+    pub fn blend_cursor_pixel_into_text(
         base_cell: &mut termwiz::cell::Cell,
         cell_above: &termwiz::cell::Cell,
         opacity: f32,
+        default_bg_colour: termwiz::color::SrgbaTuple,
     ) {
-        let mut scratch = base_cell.clone();
-        let mut blender = crate::blender::Blender::new(&mut scratch, None, opacity);
-        blender.blend_all(cell_above);
-        let colour = scratch.attrs().background();
-        base_cell.attrs_mut().set_background(colour);
+        let mut blender = crate::blender::Blender::new(base_cell, default_bg_colour, opacity);
+        let maybe_foreground =
+            crate::blender::Blender::extract_colour(cell_above.attrs().foreground());
+        let maybe_background =
+            crate::blender::Blender::extract_colour(cell_above.attrs().background());
+
+        if let (Some(bg_colour), Some(fg_colour)) = (maybe_background, maybe_foreground) {
+            let blended_colour = bg_colour.interpolate(fg_colour, 0.5);
+            blender.blend(&crate::blender::Kind::Background, blended_colour);
+        } else {
+            if let Some(fg_colour) = maybe_foreground {
+                blender.blend(&crate::blender::Kind::Background, fg_colour);
+            }
+
+            if let Some(bg_colour) = maybe_background {
+                blender.blend(&crate::blender::Kind::Background, bg_colour);
+            }
+        }
     }
 
     /// Composite 2 cells together.
@@ -76,6 +91,7 @@ impl Compositor {
         composited_cell: &mut termwiz::cell::Cell,
         cell_above: &termwiz::cell::Cell,
         opacity: f32,
+        default_bg_colour: termwiz::color::SrgbaTuple,
     ) {
         let character_above = cell_above.str();
         let is_composited_cell_pixel = composited_cell.str() == "▀" || composited_cell.str() == "▄";
@@ -94,7 +110,7 @@ impl Compositor {
             composited_cell.attrs_mut().set_background(background);
         }
 
-        let mut blender = crate::blender::Blender::new(composited_cell, None, opacity);
+        let mut blender = crate::blender::Blender::new(composited_cell, default_bg_colour, opacity);
         blender.blend_all(cell_above);
 
         // The convention we use for pixel graphics is that we always try to render using the upper
@@ -111,8 +127,9 @@ impl Compositor {
         composited_cell: &mut termwiz::cell::Cell,
         target_text_contrast: f32,
         apply_to_readable_text_only: bool,
+        default_bg_colour: termwiz::color::SrgbaTuple,
     ) {
-        let mut blender = crate::blender::Blender::new(composited_cell, None, 1.0);
+        let mut blender = crate::blender::Blender::new(composited_cell, default_bg_colour, 1.0);
         blender.ensure_readable_contrast(target_text_contrast, apply_to_readable_text_only);
     }
 
@@ -122,9 +139,10 @@ impl Compositor {
         indicator_cell: &termwiz::cell::Cell,
         x: usize,
         y: usize,
+        default_bg_colour: termwiz::color::SrgbaTuple,
     ) -> Result<()> {
         let composited_cell = Self::get_cell_mut(cells, x, y)?;
-        Self::composite_cells(composited_cell, indicator_cell, 1.0);
+        Self::composite_cells(composited_cell, indicator_cell, 1.0, default_bg_colour);
 
         Ok(())
     }

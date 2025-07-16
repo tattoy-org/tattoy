@@ -350,7 +350,7 @@ impl Minimap {
         &mut self,
         kind: shadow_terminal::output::native::SurfaceKind,
     ) -> Result<()> {
-        let image = self.tattoy.convert_pty_to_pixel_image(&kind)?;
+        let image = self.tattoy.convert_pty_to_pixel_image(&kind, true).await?;
 
         let max_width = self.state.config.read().await.minimap.max_width;
         let minimap = image

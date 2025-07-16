@@ -178,8 +178,6 @@ mod e2e {
 
     #[tokio::test(flavor = "multi_thread")]
     async fn resizing() {
-        setup_logging();
-
         let mut tattoy = start_tattoy(None).await;
         tattoy.send_command("nano --restricted").unwrap();
         tattoy.wait_for_string("GNU nano", None).await.unwrap();
@@ -232,8 +230,9 @@ mod e2e {
                 .unwrap();
 
             // Check for absence of scrollbar
+            let default_bg = (0.6627451, 0.69411767, 0.8392157, 1.0);
             tattoy
-                .wait_for_bg_color_at(None, right, bottom - 3, None)
+                .wait_for_fg_color_at(Some(default_bg), right, bottom - 3, None)
                 .await
                 .unwrap();
         }
@@ -250,7 +249,7 @@ mod e2e {
             // Check for scrollbar
             tattoy
                 .wait_for_bg_color_at(
-                    Some((0.33333334, 0.33333334, 0.33333334, 1.0)),
+                    Some((0.36862746, 0.3647059, 0.3882353, 1.0)),
                     right,
                     bottom - 2,
                     None,
@@ -350,6 +349,7 @@ mod e2e {
 
     #[tokio::test(flavor = "multi_thread")]
     async fn plugins() {
+        // setup_logging();
         let temp_dir = tempfile::tempdir().unwrap();
         let conf_dir = temp_dir.into_path();
         let conf_path = conf_dir.join("tattoy.toml");

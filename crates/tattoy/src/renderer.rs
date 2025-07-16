@@ -3,7 +3,7 @@
 use std::str::FromStr as _;
 use std::sync::Arc;
 
-use color_eyre::eyre::{bail, Result};
+use color_eyre::eyre::Result;
 
 use shadow_terminal::termwiz;
 use termwiz::surface::Surface as TermwizSurface;
@@ -63,11 +63,14 @@ pub(crate) struct Renderer {
     pub indicator_cell: termwiz::cell::Cell,
     /// Is the cursor currently visible?
     pub is_cursor_visible: bool,
+    /// Default background colour
+    pub default_bg_colour: termwiz::color::SrgbaTuple,
 }
 
 impl Renderer {
     /// Create a renderer to render to a user's terminal
     pub async fn new(state: Arc<SharedState>, with_user_terminal: bool) -> Result<Self> {
+        let default_bg_colour = *state.default_background.read().await;
         let size = *state.tty_size.read().await;
         let width = size.width;
         let height = size.height;
@@ -90,6 +93,7 @@ impl Renderer {
             frame: TermwizSurface::new(width.into(), height.into()),
             indicator_cell: Self::indicator_cell()?,
             is_cursor_visible: true,
+            default_bg_colour,
         };
 
         Ok(renderer)
@@ -106,7 +110,7 @@ impl Renderer {
                 attributes.set_foreground(colour);
                 Ok(termwiz::cell::Cell::new('▀', attributes))
             }
-            Err(()) => bail!("Couldn't convert indicator cell colour to SRGBA"),
+            Err(()) => color_eyre::eyre::bail!("Couldn't convert indicator cell colour to SRGBA"),
         }
     }
 
@@ -411,6 +415,7 @@ impl Renderer {
             &self.indicator_cell,
             (self.width - 1).into(),
             0,
+            self.default_bg_colour,
         )
     }
 
@@ -444,11 +449,10 @@ impl Renderer {
             if tattoy.id == *"shader" && !self.state.config.read().await.shader.render {
                 continue;
             }
-            if tattoy.id == *"animated_cursor"
-                && self.state.config.read().await.animated_cursor.layer == -1
-            {
+            if tattoy.id == *"animated_cursor" {
                 continue;
             }
+
             let tattoy_frame_size = tattoy.surface.dimensions();
             if tattoy_frame_size != frame_size {
                 tracing::warn!(
@@ -457,11 +461,16 @@ impl Renderer {
                 );
                 continue;
             }
-            let tattoy_cells = tattoy.surface.screen_cells();
+            let tattoy_cells = tattoy.surface.get_screen_cells();
 
             for (frame_line, tattoy_line) in frame_cells.iter_mut().zip(tattoy_cells) {
                 for (frame_cell, tattoy_cell) in frame_line.iter_mut().zip(tattoy_line) {
-                    Compositor::composite_cells(frame_cell, tattoy_cell, tattoy.opacity);
+                    Compositor::composite_cells(
+                        frame_cell,
+                        tattoy_cell,
+                        tattoy.opacity,
+                        self.default_bg_colour,
+                    );
                 }
             }
         }
@@ -494,15 +503,18 @@ impl Renderer {
             None
         };
 
-        let maybe_cursor_cells =
-            Self::get_shader_cells(self.tattoys.get("animated_cursor"), frame_size);
+        let maybe_cursor_cells = if self.tattoys.contains_key("animated_cursor") {
+            Self::get_shader_cells(self.tattoys.get("animated_cursor"), frame_size)
+        } else {
+            None
+        };
 
         let is_rendering = *self.state.is_rendering_enabled.read().await;
         let animated_cursor_opacity = self.state.config.read().await.animated_cursor.opacity;
 
         for (y, (frame_line, pty_line)) in frame_cells.iter_mut().zip(pty_cells).enumerate() {
             for (x, (frame_cell, pty_cell)) in frame_line.iter_mut().zip(pty_line).enumerate() {
-                Compositor::composite_cells(frame_cell, pty_cell, 1.0);
+                Compositor::composite_cells(frame_cell, pty_cell, 1.0, self.default_bg_colour);
 
                 if !is_rendering {
                     continue;
@@ -510,22 +522,23 @@ impl Renderer {
 
                 if let Some(shader_cells) = maybe_shader_cells.as_ref() {
                     let shader_cell = Compositor::get_cell(shader_cells, x, y)?;
-                    Compositor::composite_fg_colour_only(frame_cell, shader_cell);
+                    Compositor::composite_fg_colour_only(
+                        frame_cell,
+                        shader_cell,
+                        self.default_bg_colour,
+                    );
                 }
 
                 if let Some(cursor_cells) = maybe_cursor_cells.as_ref() {
-                    let cursor_cell = Compositor::get_cell(cursor_cells, x, y)?;
-                    let maybe_fg =
-                        super::blender::Blender::extract_colour(cursor_cell.attrs().foreground());
-                    if let Some(fg) = maybe_fg {
-                        if fg != crate::tattoys::animated_cursor::DEFAULT_PIXEL_COLOUR {
-                            Compositor::blend_bg_colours_only(
-                                frame_cell,
-                                cursor_cell,
-                                animated_cursor_opacity,
-                            );
-                        }
-                    }
+                    Self::composit_animated_cursor(
+                        cursor_cells,
+                        frame_cell,
+                        x,
+                        y,
+                        pty_cell.str() != " ",
+                        animated_cursor_opacity,
+                        self.default_bg_colour,
+                    )?;
                 }
 
                 if text_contrast.enabled {
@@ -533,9 +546,44 @@ impl Renderer {
                         frame_cell,
                         text_contrast.target_contrast,
                         apply_to_readable_text_only,
+                        self.default_bg_colour,
                     );
                 }
             }
+        }
+
+        Ok(())
+    }
+
+    /// Composite and animated cursor pixel(s). These pixels are special in that they fit between the
+    /// foreground and the background of the PTY layer.
+    fn composit_animated_cursor(
+        cursor_cells: &'_ [&[termwiz::cell::Cell]],
+        frame_cell: &mut termwiz::cell::Cell,
+        x: usize,
+        y: usize,
+        is_textish: bool,
+        opacity: f32,
+        default_bg_colour: termwiz::color::SrgbaTuple,
+    ) -> Result<()> {
+        let cursor_cell = Compositor::get_cell(cursor_cells, x, y)?.clone();
+        let fg = super::blender::Blender::extract_colour(cursor_cell.attrs().foreground());
+        let bg = super::blender::Blender::extract_colour(cursor_cell.attrs().background());
+        let is_renderable = fg.is_some() || bg.is_some();
+
+        if !is_renderable {
+            return Ok(());
+        }
+
+        if is_textish {
+            Compositor::blend_cursor_pixel_into_text(
+                frame_cell,
+                &cursor_cell,
+                opacity,
+                default_bg_colour,
+            );
+        } else {
+            Compositor::composite_cells(frame_cell, &cursor_cell, 1.0, default_bg_colour);
         }
 
         Ok(())

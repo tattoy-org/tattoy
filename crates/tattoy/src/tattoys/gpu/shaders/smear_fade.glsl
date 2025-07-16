@@ -1,13 +1,13 @@
-/// Based on: https://github.com/KroneCorylus/ghostty-shader-playground
+// * Based on https://github.com/KroneCorylus/ghostty-shader-playground/blob/main/shaders/cursor_smear_fade.glsl
+//
+// * Based on Inigo Quilez's 2D distance functions article: https://iquilezles.org/articles/distfunctions2d/
+//   Potencially optimized by eliminating conditionals and loops to enhance performance and reduce branching
 
 float getSdfRectangle(in vec2 p, in vec2 xy, in vec2 b)
 {
     vec2 d = abs(p - xy) - b;
     return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0);
 }
-
-// Based on Inigo Quilez's 2D distance functions article: https://iquilezles.org/articles/distfunctions2d/
-// Potencially optimized by eliminating conditionals and loops to enhance performance and reduce branching
 
 float seg(in vec2 p, in vec2 a, in vec2 b, inout float s, float d) {
     vec2 e = b - a;
@@ -43,7 +43,7 @@ vec2 normalize(vec2 value, float isPosition) {
 }
 
 float antialising(float distance) {
-    return 1. - smoothstep(0., normalize(vec2(2., 2.), 0.).x, distance);
+    return 1. - smoothstep(0., normalize(vec2(1., 1.), 0.).x, distance);
 }
 
 float determineStartVertexFactor(vec2 a, vec2 b) {
@@ -61,17 +61,12 @@ vec2 getRectangleCenter(vec4 rectangle) {
 float ease(float x) {
     return pow(1.0 - x, 3.0);
 }
-vec4 saturate(vec4 color, float factor) {
-    float gray = dot(color, vec4(0.299, 0.587, 0.114, 0.)); // luminance
-    return mix(vec4(gray), color, factor);
-}
 
-const float OPACITY = 0.6;
-const float DURATION = 0.3; //IN SECONDS
+const float DURATION = 0.5; //IN SECONDS
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord)
 {
-    vec4 TRAIL_COLOR = iCurrentCursorColor;
+    const vec4 TRAIL_COLOR = iCurrentCursorColor;
 
     #if !defined(WEB)
     fragColor = texture(iChannel0, fragCoord.xy / iResolution.xy);
@@ -107,14 +102,16 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
     float lineLength = distance(centerCC, centerCP);
 
     vec4 newColor = vec4(fragColor);
+    // Compute fade factor based on distance along the trail
+    float fadeFactor = 1.0 - smoothstep(lineLength, sdfCurrentCursor, easedProgress * lineLength);
 
-    vec4 trail = TRAIL_COLOR;
-    trail = saturate(trail, 2.5);
-    // Draw trail
-    newColor = mix(newColor, trail, antialising(sdfTrail));
+    // Apply fading effect to trail color
+    vec4 fadedTrailColor = TRAIL_COLOR * fadeFactor;
+
+    // Blend trail with fade effect
+    newColor = mix(newColor, fadedTrailColor, antialising(sdfTrail));
     // Draw current cursor
-    newColor = mix(newColor, trail, antialising(sdfCurrentCursor));
+    newColor = mix(newColor, TRAIL_COLOR, antialising(sdfCurrentCursor));
     newColor = mix(newColor, fragColor, step(sdfCurrentCursor, 0.));
-    // newColor = mix(fragColor, newColor, OPACITY);
     fragColor = mix(fragColor, newColor, step(sdfCurrentCursor, easedProgress * lineLength));
 }

@@ -17,6 +17,7 @@ impl Palette {
         termwiz::color::ColorAttribute::TrueColorWithPaletteFallback(srgba, index)
     }
 
+    // TODO: index is no longer `u8` it's just a `String`.
     /// Convert a palette index to a Termwiz-compatible true colour.
     pub fn true_colour_tuple_from_index(&self, index: u8) -> termwiz::color::SrgbaTuple {
         #[expect(

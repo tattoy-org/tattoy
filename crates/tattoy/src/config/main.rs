@@ -13,13 +13,13 @@ static DEFAULT_CONFIG: &str = include_str!("../../default_config.toml");
 static EXAMPLE_SHADER: &str = include_str!("../tattoys/gpu/shaders/soft_shadows.glsl");
 
 /// Bundle an example cursor shader with Tattoy.
-static EXAMPLE_CURSOR_SHADER: &str = include_str!("../tattoys/gpu/shaders/smear.glsl");
+static EXAMPLE_CURSOR_SHADER: &str = include_str!("../tattoys/gpu/shaders/smear_fade.glsl");
 
 /// Filename of the default shader
 pub static DEFAULT_SHADER_FILENAME: &str = "soft_shadows.glsl";
 
 /// Filename of the default animated cursor shader
-pub static DEFAULT_CURSOR_SHADER_FILENAME: &str = "smear.glsl";
+pub static DEFAULT_CURSOR_SHADER_FILENAME: &str = "smear_fade.glsl";
 
 /// The name of the directory where shader files are kept.
 pub const SHADER_DIRECTORY_NAME: &str = "shaders";

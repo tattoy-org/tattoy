@@ -70,7 +70,11 @@ impl crate::tattoys::gpu::shaderer::Shaderer for Shaders {
         &mut self.tattoy
     }
 
-    fn gpu(&mut self) -> &mut super::gpu::pipeline::GPU {
+    fn gpu(&self) -> &super::gpu::pipeline::GPU {
+        &self.gpu
+    }
+
+    fn gpu_mut(&mut self) -> &mut super::gpu::pipeline::GPU {
         &mut self.gpu
     }
 
@@ -82,6 +86,10 @@ impl crate::tattoys::gpu::shaderer::Shaderer for Shaders {
             .await
             .shader
             .upload_tty_as_pixels
+    }
+
+    fn is_upload_tty_with_characters(&self) -> bool {
+        true
     }
 
     async fn get_layer(&self) -> i16 {

@@ -75,6 +75,9 @@ pub(crate) async fn run(state_arc: &std::sync::Arc<SharedState>) -> Result<()> {
         crate::palette::main::get_palette(state_arc).await?;
     }
 
+    let palette = crate::config::main::Config::load_palette(Arc::clone(state_arc)).await?;
+    *state_arc.default_background.write().await = palette.background_colour();
+
     let input_thread_handle = RawInput::start(protocol_tx.clone());
 
     let users_tty_size = crate::renderer::Renderer::get_users_tty_size()?;
