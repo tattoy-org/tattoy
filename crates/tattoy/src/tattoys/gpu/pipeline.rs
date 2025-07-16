@@ -86,6 +86,11 @@ pub(crate) struct GPU {
 
     /// The GPU render pipeline.
     pipeline: Option<wgpu::RenderPipeline>,
+
+    /// We keep a copy of the TTY pixels before it's uploaded so we can compare it with the final
+    /// rendered image. This allows us to only apply the differences to the user's terminal,
+    /// which helps remove certain after-image artefacts.
+    pub tty_pixels: image::ImageBuffer<image::Rgba<u8>, Vec<u8>>,
 }
 
 impl GPU {
@@ -159,6 +164,8 @@ impl GPU {
             ichannel_texture,
 
             pipeline: None,
+
+            tty_pixels: image::ImageBuffer::default(),
         };
 
         gpu.build_pipeline().await?;
@@ -457,7 +464,7 @@ impl GPU {
     }
 
     /// Tick the render
-    pub async fn render(&mut self) -> Result<image::ImageBuffer<image::Rgba<f32>, Vec<f32>>> {
+    pub async fn render(&mut self) -> Result<image::ImageBuffer<image::Rgba<u8>, Vec<u8>>> {
         self.update_wall_time();
 
         self.queue.write_buffer(
@@ -529,16 +536,16 @@ impl GPU {
         );
 
         self.queue.submit(Some(encoder.finish()));
-        let image = self.convert_final_render_to_image().await;
+        let image = self.convert_final_render_to_image().await?;
         self.output_buffer.unmap();
 
-        image
+        Ok(image)
     }
 
     /// Convert the raw data from the GPU into a iterable image of f32-based true colour pixels.
     async fn convert_final_render_to_image(
         &self,
-    ) -> Result<image::ImageBuffer<image::Rgba<f32>, Vec<f32>>> {
+    ) -> Result<image::ImageBuffer<image::Rgba<u8>, Vec<u8>>> {
         let buffer_slice = self.output_buffer.slice(..);
 
         let (tx, rx) = tokio::sync::oneshot::channel();
@@ -561,26 +568,22 @@ impl GPU {
         )
         .context("Couldn't convert raw GPU buffer to image")?;
 
-        Ok(self.extract_rgba32f_image(&raw_image))
+        Ok(self.extract_rgba_image(&raw_image))
     }
 
     /// Convert the raw GPU image to more friendly RGB floating point pixels.
-    fn extract_rgba32f_image(
+    fn extract_rgba_image(
         &self,
         imaged: &image::ImageBuffer<image::Rgba<u8>, wgpu::BufferView<'_>>,
-    ) -> image::ImageBuffer<image::Rgba<f32>, Vec<f32>> {
+    ) -> image::ImageBuffer<image::Rgba<u8>, Vec<u8>> {
         let image_size = self.get_image_size();
-        image::Rgba32FImage::from_fn(image_size.0.into(), image_size.1.into(), |x, y| {
+
+        image::RgbaImage::from_fn(image_size.0.into(), image_size.1.into(), |x, y| {
             if let Some(pixel) = imaged.get_pixel_checked(x, y) {
-                [
-                    f32::from(pixel[0]) / 255.0,
-                    f32::from(pixel[1]) / 255.0,
-                    f32::from(pixel[2]) / 255.0,
-                    f32::from(pixel[3]) / 255.0,
-                ]
-                .into()
+                [pixel[0], pixel[1], pixel[2], pixel[3]].into()
             } else {
-                [0.0, 0.0, 0.0, 0.0].into()
+                // This should never happen
+                [0, 0, 0, 0].into()
             }
         })
     }

@@ -3,9 +3,9 @@
 
 impl super::pipeline::GPU {
     /// Update the GPU with the current state of the terminal as RGB values.
-    pub fn update_ichannel_texture_data(&self, image_data: &image::RgbaImage) {
-        let tty_image_width = image_data.dimensions().0;
-        let tty_image_height = image_data.dimensions().1;
+    pub fn update_ichannel_texture_data(&self) {
+        let tty_image_width = self.tty_pixels.dimensions().0;
+        let tty_image_height = self.tty_pixels.dimensions().1;
         let output_image_size = self.get_image_size();
         if tty_image_width != u32::from(output_image_size.0)
             || tty_image_height != u32::from(output_image_size.1)
@@ -13,7 +13,10 @@ impl super::pipeline::GPU {
             return;
         }
 
-        tracing::debug!("Updating GPU with new TTY image data: {}", image_data.len());
+        tracing::debug!(
+            "Updating GPU with new TTY image data: {}",
+            self.tty_pixels.len()
+        );
         self.queue.write_texture(
             wgpu::TexelCopyTextureInfo {
                 texture: &self.ichannel_texture,
@@ -21,7 +24,7 @@ impl super::pipeline::GPU {
                 origin: wgpu::Origin3d::ZERO,
                 aspect: wgpu::TextureAspect::All,
             },
-            image_data,
+            &self.tty_pixels,
             wgpu::TexelCopyBufferLayout {
                 offset: 0,
                 bytes_per_row: Some(4 * tty_image_width),

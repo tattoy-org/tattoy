@@ -267,11 +267,13 @@ impl Tattoyer {
     }
 
     /// Convert the PTY's contents to a pixel image representation.
-    pub fn convert_pty_to_pixel_image(
+    pub async fn convert_pty_to_pixel_image(
         &mut self,
         kind: &shadow_terminal::output::native::SurfaceKind,
+        is_convert_characters: bool,
     ) -> Result<image::DynamicImage> {
         let pixels_per_line = 2;
+        let default_background_colour = *self.state.default_background.read().await;
 
         let surface = match kind {
             shadow_terminal::output::native::SurfaceKind::Scrollback => {
@@ -300,7 +302,7 @@ impl Tattoyer {
             .as_mut_rgba8()
             .context("Couldn't get mutable reference to scrollback image")?;
 
-        let cells = &surface.screen_cells();
+        let cells = &surface.get_screen_cells();
         for (x, y, pixel) in image_buffer.enumerate_pixels_mut() {
             let line = cells
                 .get(usize::try_from(y)?.div_euclid(pixels_per_line))
@@ -312,18 +314,15 @@ impl Tattoyer {
 
             let cell_colour = if cell.str() == " " {
                 crate::blender::Blender::extract_colour(cell.attrs().background())
-                    .map_or(crate::blender::DEFAULT_COLOUR, |background_colour| {
-                        background_colour
-                    })
+                    .unwrap_or(default_background_colour)
+            } else if is_convert_characters {
+                crate::blender::Blender::extract_colour(cell.attrs().foreground()).unwrap_or(
+                    // TODO: use the actual default foreground colour from the palette.
+                    shadow_terminal::termwiz::color::SrgbaTuple(1.0, 1.0, 1.0, 1.0),
+                )
             } else {
-                let maybe_colour =
-                    crate::blender::Blender::extract_colour(cell.attrs().foreground());
-
-                if let Some(colour) = maybe_colour {
-                    colour
-                } else {
-                    color_eyre::eyre::bail!("Using Minimap without a parsed palette");
-                }
+                crate::blender::Blender::extract_colour(cell.attrs().background())
+                    .unwrap_or(default_background_colour)
             };
 
             *pixel = image::Rgba(cell_colour.to_srgb_u8().into());
@@ -334,14 +333,19 @@ impl Tattoyer {
 
     /// Depending on whether the `upload_tty_as_pixels` config is set by the user, decide what to
     /// send the GPU in order to represent the terminal contents.
-    pub fn get_tty_image_for_upload(
+    pub async fn get_tty_image_for_upload(
         &mut self,
         is_upload_tty_as_pixels: bool,
+        is_upload_characters: bool,
     ) -> Result<image::RgbaImage> {
         let image = if is_upload_tty_as_pixels {
-            self.convert_pty_to_pixel_image(&shadow_terminal::output::native::SurfaceKind::Screen)?
-                .flipv()
-                .into()
+            self.convert_pty_to_pixel_image(
+                &shadow_terminal::output::native::SurfaceKind::Screen,
+                is_upload_characters,
+            )
+            .await?
+            .flipv()
+            .into()
         } else {
             self.pure_black_image()
         };
@@ -353,6 +357,7 @@ impl Tattoyer {
     /// shaders that use `iChannel0`.
     fn pure_black_image(&self) -> image::RgbaImage {
         image::ImageBuffer::from_fn(self.width.into(), u32::from(self.height) * 2, |_, _| {
+            // TODO: Does this need to use the default background colour from the palette?
             [0, 0, 0, 255].into()
         })
     }
