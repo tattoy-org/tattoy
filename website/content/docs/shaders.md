@@ -42,7 +42,7 @@ float iTime;
 int iFrame;
 ```
 
-And a unique variable, `vec2 iCursor`, see [below](#icursor) for more details.
+And some unique cursor-related variables, see [below](#cursors) for more details.
 
 ## Differences from Shadertoy
 
@@ -59,9 +59,29 @@ vec2 uv = vec2(terminal_x, terminal_y) / iResolution.xy;
 vec3 color = texture(iChannel0, uv).rgb;
 ```
 
-### `iCursor`
+### Cursors
 
 Just like Shadertoy, you can access the position of the mouse with `iMouse`. However, Tattoy also provides a similar variable named, `iCursor`, which stores the current `vec2` coordinates of the terminal's cursor. Both `iMouse` and `iCursor` are in the coordinate system of the terminal itself, with the exception that the y-axis is multiplied by 2. This is because a shader can actually render two "pixels" per terminal cell using the UTF8 half-block trick: "▀", "▄".
+
+Tattoy also supports Ghostty's animated cursor variables. See [these shaders](https://github.com/KroneCorylus/ghostty-shader-playground/tree/main/shaders) for example usage.
+
+So these are all the cursor-related variables:
+
+```glsl
+vec4 iCursor;
+
+// Ghostty cursor variables.
+//
+// The current and previous positions of the cursor. The third and fourth indexes of the
+// `vec4` contain the width and height of the cursor.
+vec4 iCurrentCursor;
+vec4 iPreviousCursor;
+// The cursor colours in RGBA.
+vec4 iCurrentCursorColor;
+vec4 iPreviousCursorColor;
+// The time since the last cursor change.
+float iTimeCursorChange;
+```
 
 ## Ghostty Shaders
 Tattoy supports all [Ghostty](https://ghostty.org) shaders, for example those from the [ghostty-shaders repo](https://github.com/hackr-sh/ghostty-shaders). However, unlike Ghosty, Tattoy cannot affect font rendering. So for example shaders that distort the screen to create old school CRT effects, won't actually change the position or shape of any rendered text. The shaders still work but their impact isn't so pronounced.

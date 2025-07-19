@@ -30,7 +30,7 @@
 {% endblock page_name %}
 
 {% block page_content %}
-<div class="docs-page">
+<div class="docs-page" id="{% if page.extra.css_id %}{{ page.extra.css_id }}{% endif %}">
   <div class="docs-content">
     {# Create an array of sections and pages in reading order #}
       {% set all_pages = [] %}
