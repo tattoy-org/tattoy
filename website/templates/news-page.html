@@ -1,5 +1,6 @@
 {% extends "layouts/page-with-menu.html" %}
 {% import "macros/news.html" as news_macros %}
+{% import "macros/window.html" as window_macro %}
 {% block page_with_menu_extra_class %}page-with-menu--news{% endblock page_with_menu_extra_class %}
 {% block page_name %}Post{% endblock page_name %}
 {% block mobile_page_menu %}{{ news_macros::news_menu(toc=page.toc, max_levels=1) }}{% endblock mobile_page_menu %}
@@ -57,6 +58,10 @@
   {% endif %}
       {% endif %}
 </div>
+{% endif %}
+
+{% if page.extra.screenshot %}
+{{ window_macro::window(source=page.extra.screenshot, extra="video") }} 
 {% endif %}
 <div class="media-content news-content">
   {{ page.content | safe }}
