@@ -30,8 +30,17 @@ pub const STRING_TERMINATOR: &str = "\x1c";
 pub const BELL: &str = "\x07";
 
 /// Smoothly transition between 2 values.
-#[must_use]
-pub fn smoothstep(edge0: f32, edge1: f32, mut x: f32) -> f32 {
+pub(crate) fn smoothstep(edge0: f32, edge1: f32, mut x: f32) -> f32 {
     x = ((x - edge0) / (edge1 - edge0)).clamp(0.0, 1.0);
     x * x * 2.0f32.mul_add(-x, 3.0)
+}
+
+/// A simple hash function.
+pub(crate) fn simple_hash(input: &[u8]) -> u64 {
+    let mut hash: u64 = 0;
+    for byte in input {
+        let byte_u64 = u64::from(*byte);
+        hash = ((hash << 5u8) + hash) + byte_u64;
+    }
+    hash
 }
