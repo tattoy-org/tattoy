@@ -3,6 +3,18 @@
 use color_eyre::eyre::{ContextCompat as _, Result};
 use futures_util::FutureExt as _;
 
+/// A state machine representing the stages of a short animation. Currently only used for the
+/// animated cursor. It's basically to prevent rendering when it's not needed.
+#[derive(PartialEq, Eq)]
+pub(crate) enum HashedRender {
+    /// Something has changed that means rendering is needed.
+    NeedsRendering,
+    /// We're in the middle of rendering.
+    Rendering(u64),
+    /// Hashes matched so rendering is finished for now.
+    Finished,
+}
+
 /// Common logic for tattoys that render shaders.
 pub(crate) trait Shaderer: Sized {
     /// Return an immutable reference to the Tattoyer helper.
@@ -23,11 +35,26 @@ pub(crate) trait Shaderer: Sized {
     /// Should the character colours be uploaded as part of the TTY pixels?
     fn is_upload_tty_with_characters(&self) -> bool;
 
+    /// Should the final render be hashed? This is useful for quickly comparing renders to decide
+    /// if they should receive further processing.
+    fn is_should_hash_render(&self) -> bool {
+        false
+    }
+
     /// Get the current configured layer for the tattoy.
     async fn get_layer(&self) -> i16;
 
     /// Get the current configured opacity for the tattoy.
     async fn get_opacity(&self) -> f32;
+
+    /// A wrapper for the render step.
+    async fn render_handler(&mut self) -> Result<()> {
+        self.render().await
+    }
+
+    /// The hash of the render image can be used to decide whether it actually gets rendered to the
+    /// user's terminal or not.
+    fn handle_render_hash(&mut self, _hash: HashedRender) {}
 
     /// Get the current configured cursor scale for the tattoy.
     #[expect(
@@ -107,7 +134,7 @@ pub(crate) trait Shaderer: Sized {
         loop {
             tokio::select! {
                 () = shader.tattoy_mut().sleep_until_next_frame_tick() => {
-                    shader.render().await?;
+                    shader.render_handler().await?;
                 },
                 result = protocol.recv() => {
                     if matches!(result, Ok(crate::run::Protocol::End)) {
@@ -133,6 +160,7 @@ pub(crate) trait Shaderer: Sized {
             Ok(message) => {
                 if matches!(&message, crate::run::Protocol::Repaint) {
                     self.upload_tty_as_pixels().await?;
+                    self.handle_render_hash(HashedRender::NeedsRendering);
                 }
 
                 self.gpu_mut().handle_protocol_message(&message).await?;
@@ -191,6 +219,9 @@ pub(crate) trait Shaderer: Sized {
         self.tattoy_mut().opacity = self.get_opacity().await;
         self.tattoy_mut().layer = self.get_layer().await;
 
+        let mut hashable_render = Vec::new();
+        let is_upload_tty_as_pixels = self.is_upload_tty_as_pixels().await;
+
         let tty_height_in_pixels = u32::from(self.tattoy().height) * 2;
         for y in 0..tty_height_in_pixels {
             for x in 0..self.tattoy().width {
@@ -208,8 +239,13 @@ pub(crate) trait Shaderer: Sized {
                     f32::from(pixel_u8[3]) / 255.0,
                 ];
 
-                if self.is_upload_tty_as_pixels().await {
+                if is_upload_tty_as_pixels {
                     if self.are_pixels_different(x.into(), y_reversed, pixel_u8)? {
+                        if self.is_should_hash_render() {
+                            hashable_render.extend(
+                                Self::convert_pixel_to_binary(x, y_reversed, pixel_u8).to_vec(),
+                            );
+                        }
                         self.tattoy_mut().surface.add_pixel(
                             x.into(),
                             y.try_into()?,
@@ -224,9 +260,35 @@ pub(crate) trait Shaderer: Sized {
             }
         }
 
+        if self.is_should_hash_render() {
+            let hash = crate::utils::simple_hash(&hashable_render);
+            self.handle_render_hash(HashedRender::Rendering(hash));
+        }
+
         self.tattoy_mut().send_output().await?;
 
         Ok(())
+    }
+
+    /// Convert the pixel to `u8`s so it can be hashed later.
+    #[expect(
+        clippy::as_conversions,
+        clippy::cast_possible_truncation,
+        reason = "It's just for creating a unique hash"
+    )]
+    fn convert_pixel_to_binary(x: u16, y: u32, pixel: [u8; 4]) -> [u8; 10] {
+        [
+            (x >> 8u8) as u8,
+            x as u8,
+            (y >> 24u8) as u8,
+            (y >> 16u8) as u8,
+            (y >> 8u8) as u8,
+            y as u8,
+            pixel[0],
+            pixel[1],
+            pixel[2],
+            pixel[3],
+        ]
     }
 
     /// Compare the pixel before and after rendering.

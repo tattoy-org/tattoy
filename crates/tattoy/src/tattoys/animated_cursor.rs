@@ -47,6 +47,9 @@ pub(crate) struct AnimatedCursor {
     tattoy: Tattoyer,
     /// All the special GPU handling code.
     gpu: super::gpu::pipeline::GPU,
+    /// A hash of the last GPU render, so we can decide whether it's worth applying the render to
+    /// the user's terminal as well.
+    hashed_render: super::gpu::shaderer::HashedRender,
 }
 
 impl crate::tattoys::gpu::shaderer::Shaderer for AnimatedCursor {
@@ -72,6 +75,10 @@ impl crate::tattoys::gpu::shaderer::Shaderer for AnimatedCursor {
 
     fn is_upload_tty_with_characters(&self) -> bool {
         false
+    }
+
+    fn is_should_hash_render(&self) -> bool {
+        true
     }
 
     async fn get_layer(&self) -> i16 {
@@ -122,6 +129,38 @@ impl crate::tattoys::gpu::shaderer::Shaderer for AnimatedCursor {
             output_channel,
         )
         .await;
-        Ok(Self { tattoy, gpu })
+
+        Ok(Self {
+            tattoy,
+            gpu,
+            hashed_render: super::gpu::shaderer::HashedRender::NeedsRendering,
+        })
+    }
+
+    async fn render_handler(&mut self) -> Result<()> {
+        if matches!(
+            self.hashed_render,
+            super::gpu::shaderer::HashedRender::Finished
+        ) {
+            return Ok(());
+        }
+
+        self.render().await
+    }
+
+    fn handle_render_hash(&mut self, hashed_render: super::gpu::shaderer::HashedRender) {
+        match hashed_render {
+            super::gpu::shaderer::HashedRender::NeedsRendering
+            | super::gpu::shaderer::HashedRender::Finished => {
+                self.hashed_render = hashed_render;
+            }
+            super::gpu::shaderer::HashedRender::Rendering(_) => {
+                if hashed_render == self.hashed_render {
+                    self.hashed_render = super::gpu::shaderer::HashedRender::Finished;
+                } else {
+                    self.hashed_render = hashed_render;
+                }
+            }
+        }
     }
 }
