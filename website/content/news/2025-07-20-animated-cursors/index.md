@@ -4,6 +4,7 @@ date = 2025-07-20
 authors = ["Tom Buckley-Houston"]
 [extra]
 screenshot = "/assets/screenshots/cursor_blaze_large.webm"
+description = "Animated cursors for all terminals"
 +++
 
 Tattoy now supports animated cursors. It uses the same format as Ghostty, therefore rendering the cursor using custom shaders.
