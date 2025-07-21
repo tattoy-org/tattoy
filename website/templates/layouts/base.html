@@ -32,6 +32,12 @@
   {% set page_title = "Tattoy" %}
 {% endif %}
 
+{% if page and page.extras and page.extra.description %}
+  {% set page_description = page.extra.description %}
+{% else %}
+  {% set page_description = "Tattoy is a text-based terminal compositor" %}
+{% endif %}
+
 {% if section and section.path %}
   {% set path = "/" ~ section.path %}
 {% elif page and page.path %}
@@ -74,11 +80,11 @@
     >
     <meta
       property="og:image"
-      content="https://tattoy.sh/assets/tattoy_logo.png"
+      content="https://tattoy.sh/assets/screenshots/logo_full.png"
     >
     <meta
       property="og:description"
-      content="Tattoy is a text-based terminal compositor"
+      content="{{ page_description }}"
     >
     <link rel="shortcut icon" type="image/png" href="/assets/favicon.png">
     <link
