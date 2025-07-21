@@ -97,7 +97,8 @@ pub(crate) async fn run(state_arc: &std::sync::Arc<SharedState>) -> Result<()> {
         cli_args.enabled_tattoys.clone(),
         surfaces_tx.clone(),
         Arc::clone(state_arc),
-    );
+    )
+    .await;
 
     let scrollback_size = state_arc.config.read().await.scrollback_size;
     let shadow_terminal_config = shadow_terminal::shadow_terminal::Config {

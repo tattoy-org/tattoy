@@ -37,7 +37,16 @@ jobs:
     steps:
       - if: matrix.os == 'ubuntu-latest'
         name: Install Linux system dependencies
-        run: sudo apt-get install libxcb1-dev libdbus-1-dev
+        run: |
+          sudo apt-get install \
+            libxcb1-dev libdbus-1-dev \
+            mesa-vulkan-drivers \
+            libvulkan1 \
+            vulkan-tools \
+            vulkan-validationlayers \
+            libasound2-dev \
+            libudev-dev
+          vulkaninfo
       - if: matrix.os == 'macos-latest'
         name: Install MacOS dependencies
         run: brew install bash nano watch
@@ -50,8 +59,16 @@ jobs:
           cache-on-failure: true
       - name: Build
         run: cargo build --verbose --all
-      - name: Run tests
-        run: cargo nextest run --no-fail-fast --retries 2
+      - name: Run tests (excluding GPU tests)
+        # Multiline escapes don't work on Windows
+        run: |
+          cargo nextest run --filterset 'not (test(/gpu/))' --no-fail-fast --retries 2
+      - if: matrix.os == 'ubuntu-latest'
+        name: Run GPU tests
+        run: |
+          cargo nextest run \
+            --filterset 'test(/gpu/)' \
+            --no-fail-fast --retries 2
       - name: Output e2e test logs (on failure)
         if: failure()
         run: cat crates/tests/tattoy.log

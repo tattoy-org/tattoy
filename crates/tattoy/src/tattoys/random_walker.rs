@@ -54,7 +54,13 @@ impl RandomWalker {
         state: std::sync::Arc<crate::shared_state::SharedState>,
     ) -> Result<()> {
         let mut protocol = state.protocol_tx.subscribe();
-        let mut random_walker = Self::new(output, state).await;
+        let mut random_walker = Self::new(output, std::sync::Arc::clone(&state)).await;
+
+        state
+            .initialised_systems
+            .write()
+            .await
+            .push("random_walker".to_owned());
 
         #[expect(
             clippy::integer_division_remainder_used,

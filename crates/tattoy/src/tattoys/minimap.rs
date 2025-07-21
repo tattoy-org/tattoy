@@ -89,7 +89,12 @@ impl Minimap {
         state: Arc<crate::shared_state::SharedState>,
     ) -> Result<()> {
         let mut protocol = state.protocol_tx.subscribe();
-        let mut minimap = Self::new(output, state).await;
+        let mut minimap = Self::new(output, Arc::clone(&state)).await;
+        state
+            .initialised_systems
+            .write()
+            .await
+            .push("minimap".to_owned());
 
         #[expect(
             clippy::integer_division_remainder_used,
