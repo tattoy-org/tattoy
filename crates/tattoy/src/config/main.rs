@@ -196,13 +196,32 @@ impl Config {
 
         std::fs::create_dir_all(path.clone())?;
 
-        let shaders_directory = path.join(SHADER_DIRECTORY_NAME);
+        *state.config_path.write().await = path;
+
+        Ok(())
+    }
+
+    /// Make sure all the shader directories and files exist.
+    fn ensure_shader_assets(config_base: &std::path::Path) -> Result<()> {
+        let shaders_directory = config_base.join(SHADER_DIRECTORY_NAME);
         std::fs::create_dir_all(shaders_directory)?;
 
-        let animated_cursor_directory = path.join(CURSOR_SHADER_DIRECTORY_NAME);
+        let animated_cursor_directory = config_base.join(CURSOR_SHADER_DIRECTORY_NAME);
         std::fs::create_dir_all(animated_cursor_directory)?;
 
-        *state.config_path.write().await = path;
+        let shader_path = config_base
+            .join(SHADER_DIRECTORY_NAME)
+            .join(DEFAULT_SHADER_FILENAME);
+        if !shader_path.exists() {
+            std::fs::write(shader_path, EXAMPLE_SHADER)?;
+        }
+
+        let animated_cursor_path = config_base
+            .join(CURSOR_SHADER_DIRECTORY_NAME)
+            .join(DEFAULT_CURSOR_SHADER_FILENAME);
+        if !animated_cursor_path.exists() {
+            std::fs::write(animated_cursor_path, EXAMPLE_CURSOR_SHADER)?;
+        }
 
         Ok(())
     }
@@ -223,20 +242,11 @@ impl Config {
             .file_name()
             .context("Couldn't get file name from config path")?;
         let is_default_config = config_file_name == crate::cli_args::DEFAULT_CONFIG_FILE_NAME;
-        if is_default_config && !config_path.exists() {
-            std::fs::write(config_path.clone(), DEFAULT_CONFIG)?;
-
-            let shader_path = Self::directory(state)
-                .await
-                .join(SHADER_DIRECTORY_NAME)
-                .join(DEFAULT_SHADER_FILENAME);
-            std::fs::write(shader_path, EXAMPLE_SHADER)?;
-
-            let animated_cursor_path = Self::directory(state)
-                .await
-                .join(CURSOR_SHADER_DIRECTORY_NAME)
-                .join(DEFAULT_CURSOR_SHADER_FILENAME);
-            std::fs::write(animated_cursor_path, EXAMPLE_CURSOR_SHADER)?;
+        if is_default_config {
+            if !config_path.exists() {
+                std::fs::write(config_path.clone(), DEFAULT_CONFIG)?;
+            }
+            Self::ensure_shader_assets(&Self::default_directory()?)?;
         }
 
         tracing::info!("(Re)loading the main Tattoy config from: {config_path:?}");
