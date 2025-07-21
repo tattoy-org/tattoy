@@ -127,6 +127,12 @@ pub(crate) trait Shaderer: Sized {
         let mut protocol = state.protocol_tx.subscribe();
         let mut shader = Self::new(output, std::sync::Arc::clone(state)).await?;
 
+        state
+            .initialised_systems
+            .write()
+            .await
+            .push(shader.tattoy().id.clone());
+
         #[expect(
             clippy::integer_division_remainder_used,
             reason = "This is caused by the `tokio::select!`"
@@ -188,6 +194,7 @@ pub(crate) trait Shaderer: Sized {
     /// Tick the render
     async fn render(&mut self) -> Result<()> {
         let rendered_pixels = self.gpu_mut().render().await?;
+        tracing::info!("!!");
 
         if self.is_upload_tty_as_pixels().await {
             if self.gpu().tty_pixels.dimensions().1 == 0 {

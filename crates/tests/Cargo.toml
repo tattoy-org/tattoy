@@ -14,7 +14,7 @@ tracing-subscriber.workspace = true
 
 [[test]]
 name = "e2e"
-path = "e2e_tests.rs"
+path = "main.rs"
 
 [lints]
 workspace = true

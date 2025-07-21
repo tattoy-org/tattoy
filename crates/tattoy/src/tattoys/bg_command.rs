@@ -90,6 +90,12 @@ impl BGCommand {
         let mut protocol = state.protocol_tx.subscribe();
         let mut commander = Self::new(output, &state, palette).await;
 
+        state
+            .initialised_systems
+            .write()
+            .await
+            .push("bg_command".to_owned());
+
         #[expect(
             clippy::integer_division_remainder_used,
             reason = "This is caused by the `tokio::select!`"

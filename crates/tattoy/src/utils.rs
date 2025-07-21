@@ -40,7 +40,25 @@ pub(crate) fn simple_hash(input: &[u8]) -> u64 {
     let mut hash: u64 = 0;
     for byte in input {
         let byte_u64 = u64::from(*byte);
-        hash = ((hash << 5u8) + hash) + byte_u64;
+        let shifted = safe_add(hash << 5u8, hash);
+        hash = safe_add(shifted, byte_u64);
     }
     hash
+}
+
+/// Safely add 2 `u64`s by wrapping on overflow.
+#[expect(
+    clippy::as_conversions,
+    clippy::cast_possible_truncation,
+    clippy::integer_division_remainder_used,
+    reason = "u64 always fits into u128"
+)]
+const fn safe_add(left: u64, right: u64) -> u64 {
+    match left.checked_add(right) {
+        Some(result) => result,
+        None => {
+            let wrapped_result = (left as u128 + right as u128) % (u64::MAX as u128 + 1);
+            wrapped_result as u64
+        }
+    }
 }
