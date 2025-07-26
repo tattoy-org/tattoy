@@ -63,6 +63,8 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           bin: tattoy
           target: ${{ matrix.target }}
+          # I think we need to use this so that AUR updates don't fail with SHA sum mismtatches.
+          # archive: $bin-$tag-$target
           locked: true
           tar: unix
           zip: windows
