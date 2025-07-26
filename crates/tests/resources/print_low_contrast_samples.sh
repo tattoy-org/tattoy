@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 function bg() {
 	printf "\033[48;2;%d;%d;%dm" $1 $2 $3
