@@ -42,6 +42,7 @@ impl Tattoyer {
         output_channel: tokio::sync::mpsc::Sender<crate::run::FrameUpdate>,
     ) -> Self {
         let tty_size = state.get_tty_size().await;
+        let target_frame_rate = state.config.read().await.frame_rate;
         Self {
             id: id.clone(),
             layer,
@@ -53,7 +54,7 @@ impl Tattoyer {
             height: tty_size.height,
             scrollback: shadow_terminal::output::native::CompleteScrollback::default(),
             screen: shadow_terminal::output::native::CompleteScreen::default(),
-            target_frame_rate: 30,
+            target_frame_rate,
             last_frame_tick: tokio::time::Instant::now(),
             last_scroll_position: 0,
         }
@@ -76,7 +77,7 @@ impl Tattoyer {
         self.height = height;
     }
 
-    /// Handle commpm protocol messages, like resizing and new output from the underlying terminal.
+    /// Handle commom protocol messages, like resizing and new output from the underlying terminal.
     pub(crate) fn handle_common_protocol_messages(
         &mut self,
         message: crate::run::Protocol,

@@ -88,6 +88,7 @@ path = "shaders/cursors/smear_fade.glsl"
 # by default we set the cursor size to 0.0 to avoid this oversizing. However of course, not
 # all cursor shaders will have this problem, so it may be useful to play with this value.
 cursor_scale = 0.0
+# NB: The global `frame_rate` setting can also have a significant affect on the animated cursor.
 
 [bg_command]
 enabled = false

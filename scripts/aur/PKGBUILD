@@ -7,7 +7,7 @@ license=("MIT")
 arch=("x86_64")
 provides=("tattoy")
 conflicts=("tattoy")
-source=("https://github.com/tattoy-org/tattoy/releases/download/tattoy-v$pkgver/tattoy-x86_64-unknown-linux-gnu.tar.gz")
+source=(tattoy-v$pkgver.tar.gz::"https://github.com/tattoy-org/tattoy/releases/download/tattoy-v$pkgver/tattoy-x86_64-unknown-linux-gnu.tar.gz")
 sha256sums=("SKIP")
 
 package() {

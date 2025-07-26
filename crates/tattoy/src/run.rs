@@ -257,7 +257,7 @@ async fn setup(state: &std::sync::Arc<SharedState>) -> Result<CliArgs> {
     //   true color terminal anyway.
     std::env::set_var("COLORTERM", "truecolor");
 
-    tracing::info!("Starting Tattoy");
+    tracing::info!("Starting Tattoy v{}", env!("CARGO_PKG_VERSION"));
     tracing::debug!("Loaded config: {:?}", state.config.read().await);
 
     let tty_size = crate::renderer::Renderer::get_users_tty_size()?;
@@ -304,7 +304,7 @@ async fn setup_logging(cli_args: CliArgs, state: &std::sync::Arc<SharedState>) -
         // very noisy and most of it is just for the Tokio console, which aren't needed
         // anyway as they're parsed internally.
         tracing_subscriber::EnvFilter::builder()
-            .with_default_directive("error".parse()?)
+            .with_default_directive("warn".parse()?)
             .from_env_lossy()
     } else {
         tracing_subscriber::EnvFilter::builder()
