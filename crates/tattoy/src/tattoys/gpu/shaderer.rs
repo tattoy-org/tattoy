@@ -178,6 +178,22 @@ pub(crate) trait Shaderer: Sized {
         Ok(())
     }
 
+    /// Update the cursor state ready for the next render.
+    async fn update_cursor(&mut self) -> Result<()> {
+        let cursor_position = self.tattoy().screen.surface.cursor_position();
+        let cursor_colour = self.get_cursor_colour(cursor_position.0, cursor_position.1)?;
+
+        let cursor_scale = self.get_cursor_scale().await;
+        self.gpu_mut().update_cursor(
+            cursor_position.0.try_into()?,
+            cursor_position.1.try_into()?,
+            cursor_colour,
+            cursor_scale,
+        );
+
+        Ok(())
+    }
+
     /// Upload the TTY content as coloured pixels.
     async fn upload_tty_as_pixels(&mut self) -> Result<()> {
         let is_upload_tty_as_pixels = self.is_upload_tty_as_pixels().await;
@@ -210,16 +226,7 @@ pub(crate) trait Shaderer: Sized {
             }
         }
 
-        let cursor_position = self.tattoy().screen.surface.cursor_position();
-        let cursor_colour = self.get_cursor_colour(cursor_position.0, cursor_position.1)?;
-
-        let cursor_scale = self.get_cursor_scale().await;
-        self.gpu_mut().update_cursor(
-            cursor_position.0.try_into()?,
-            cursor_position.1.try_into()?,
-            cursor_colour,
-            cursor_scale,
-        );
+        self.update_cursor().await?;
 
         self.tattoy_mut().initialise_surface();
         self.tattoy_mut().opacity = self.get_opacity().await;
