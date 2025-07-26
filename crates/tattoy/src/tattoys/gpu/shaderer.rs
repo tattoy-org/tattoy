@@ -194,7 +194,6 @@ pub(crate) trait Shaderer: Sized {
     /// Tick the render
     async fn render(&mut self) -> Result<()> {
         let rendered_pixels = self.gpu_mut().render().await?;
-        tracing::info!("!!");
 
         if self.is_upload_tty_as_pixels().await {
             if self.gpu().tty_pixels.dimensions().1 == 0 {
