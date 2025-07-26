@@ -169,9 +169,15 @@ jobs:
     permissions:
       contents: read
     steps:
+      - name: Write release version
+        run: |
+          TATTOY_VERSION=${GITHUB_REF_NAME#tattoy-v}
+          echo Tattoy version: $TATTOY_VERSION
+          echo "TATTOY_VERSION=$TATTOY_VERSION" >> $GITHUB_ENV
       - name: Bump formula
         uses: mislav/bump-homebrew-formula-action@v3.4
         with:
+          tag-name: ${{ env.TATTOY_VERSION }}
           homebrew-tap: tattoy-org/homebrew-tap
           formula-name: tattoy
           formula-path: tattoy.rb
