@@ -62,7 +62,7 @@ max_width = 10
 enabled = false
 opacity = 0.75
 layer = -10
-# Whether to render the computed shader from the GPU. The shader pixels can still be
+# Whether to render the computed shader directly to the terminal. The shader pixels can still be
 # used for other purposes such as defining the foreground colour of the terminal's text,
 # see `render_shader_colours_to_text`.
 render = true
@@ -70,14 +70,14 @@ render = true
 # This is most likely desirable in conjunction with the `render` option, so that the shader
 # is only visible via the terminal's text.
 render_shader_colours_to_text = false
-# Path to a Shadertoy shader on your local filesystem. Is relative to the root of
-# Tattoy's config directory.
+# Path to a Shadertoy shader on your local filesystem. Relative to the root of Tattoy's config
+# directory.
 path = "shaders/soft_shadows.glsl"
 
 [animated_cursor]
 enabled = false
 opacity = 1.0
-# Path to the cursor shader on your local filesystem. Is relative to the root of Tattoy's
+# Path to the cursor shader on your local filesystem. Relative to the root of Tattoy's
 # config directory.
 path = "shaders/cursors/smear_fade.glsl"
 # The scale of the cursor. Non-Tattoy based cursor shaders are written for cursors that are
@@ -100,16 +100,16 @@ enabled = false
 #   `command = ["mpv", "--really-quiet", "--vo=tct", "--volume=0", "https://www.youtube.com/watch?v=UkgK8eUdpAo"]`
 command = ["echo", "Hello World"]
 # Do you expect the command to exit or not?
-# Usually when a command exits Tattoy shows an error notification. But you may want to render a
+# Usually when a command exits, Tattoy shows an error notification. But you may want to render a
 # command that outputs some static content, for example to print out some ASCII-based image:
 #   `command = ["chafa", "/path/to/wallpaper.png"]`
-# Bare in mind that there's currently no config to re-run the command on terminal resize.
+# Bear in mind that there's currently no config to re-run the command on terminal resize.
 expect_exit = false
 opacity = 0.75
 layer = -5
 
 [keybindings]
-# Whether Tattoy renders anything apart from the TTY. They TTY is always rendered,
+# Whether Tattoy renders anything apart from the TTY. The TTY is always rendered,
 # so toggling this will disable all tattoys, effects, eye-candy, etc.
 toggle_tattoy = { mods = "ALT", key = "t" }
 # Toggle scolling mode whilst in scrollback.
