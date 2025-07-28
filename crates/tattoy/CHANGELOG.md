@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.8](https://github.com/tattoy-org/tattoy/compare/tattoy-v0.1.7...tattoy-v0.1.8) - 2025-07-28
+
+### Added
+
+- strip OSC paste codes
+
+### Fixed
+
+- *(shaders)* divide by rounding down to create buffer
+- make the `frame_rate` config work again
+
+### Other
+
+- typos and grammar
+
 ## [0.1.7](https://github.com/tattoy-org/tattoy/compare/tattoy-v0.1.6...tattoy-v0.1.7) - 2025-07-21
 
 ### Added
