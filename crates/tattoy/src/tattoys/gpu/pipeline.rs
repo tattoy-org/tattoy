@@ -211,9 +211,16 @@ impl GPU {
     }
 
     /// Align a buffer or texture dimension to a consistent multiple.
+    #[expect(
+        clippy::unwrap_used,
+        reason = "
+           `checked_div()` only returns `None` when the right-hand side is 0, which is clearly
+           impossible here.
+        "
+    )]
     const fn align_dimension(number: u32) -> u32 {
         let multiple = 256;
-        number.div_ceil(multiple) - 1 + multiple
+        (number.checked_div(multiple).unwrap() * multiple) + multiple
     }
 
     /// Create the bind group layout that defines where the various shader data is located.
