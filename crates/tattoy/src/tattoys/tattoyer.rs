@@ -83,7 +83,7 @@ impl Tattoyer {
         message: crate::run::Protocol,
     ) -> Result<()> {
         tracing::trace!(
-            "'{}' tattoy recevied protocol message: {message:?}",
+            "'{}' tattoy received protocol message: {message:?}",
             self.id
         );
 

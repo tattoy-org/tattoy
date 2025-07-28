@@ -21,6 +21,7 @@ env:
   CARGO_TERM_COLOR: always
   RUST_VERSION: 1.87.0
   RUST_BACKTRACE: 1
+  RUST_LOG: "trace,tattoy_wezterm_term=off"
 
 jobs:
   build-test:
@@ -71,7 +72,7 @@ jobs:
             --no-fail-fast --retries 2
       - name: Output e2e test logs (on failure)
         if: failure()
-        run: cat crates/tests/tattoy.log
+        run: cat crates/tests/tests.log
 
   lints:
     name: "Lints 💅"

@@ -3157,9 +3157,9 @@ dependencies = [
 
 [[package]]
 name = "shadow-terminal"
-version = "0.2.2"
+version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a97cf60e08eee10cfdc4859950a9426c22e159fe3ed66fc34d5babd8a264c4e0"
+checksum = "7ab4566cd23dd35d3fd0425052ed3a80663d7a2cdad7122e6f64fc71a5aefcfd"
 dependencies = [
  "portable-pty",
  "schemars",
