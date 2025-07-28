@@ -23,7 +23,7 @@ tracing = "0.1.40"
 tracing-subscriber = {version = "0.3.18", features = ["env-filter"]}
 
 [workspace.dependencies.shadow-terminal]
-version = "0.2.2"
+version = "0.2.3"
 # path = "../shadow-terminal/shadow-terminal/"
 
 # Canonical lints for whole crate

@@ -14,16 +14,25 @@ impl crate::terminal_proxy::proxy::Proxy {
             return Ok(());
         }
 
-        self.forward_input_to_pty(input).await
+        self.forward_input_to_pty(input.to_owned()).await
     }
 
     /// Forward raw input bytes to the underlying PTY.
-    async fn forward_input_to_pty(&self, input: &crate::raw_input::ParsedInput) -> Result<()> {
+    async fn forward_input_to_pty(&self, input: crate::raw_input::ParsedInput) -> Result<()> {
+        // If the input is from an OSC paste event, then only forward the contents of the paste,
+        // and not the surrounding OSC codes.
+        let bytes = if let termwiz::input::InputEvent::Paste(string) = input.event {
+            string.into_bytes()
+        } else {
+            input.bytes
+        };
+
         tracing::trace!(
             "Terminal proxy received input bytes: {}",
-            String::from_utf8_lossy(&input.bytes)
+            String::from_utf8_lossy(&bytes)
         );
-        for chunk in input.bytes.chunks(128) {
+
+        for chunk in bytes.chunks(128) {
             let mut buffer: crate::raw_input::BytesFromSTDIN = [0; 128];
             for (i, chunk_byte) in chunk.iter().enumerate() {
                 let buffer_byte = buffer.get_mut(i).context("Couldn't get byte from buffer")?;

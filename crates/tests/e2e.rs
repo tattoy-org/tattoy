@@ -15,7 +15,7 @@ async fn basic_interactivity() {
 
     crate::utils::assert_random_walker_moves(&mut tattoy).await;
 
-    tattoy.send_command("echo $((1+1))").unwrap();
+    tattoy.send_command_with_osc_paste("echo $((1+1))").unwrap();
     tattoy.wait_for_string("2", None).await.unwrap();
 
     crate::utils::assert_random_walker_moves(&mut tattoy).await;
@@ -112,7 +112,7 @@ async fn scrolling() {
 
     let (mut tattoy, _) = crate::utils::start_tattoy(None).await;
     tattoy
-        .send_command("cat resources/LOREM_IPSUM.txt")
+        .send_command_with_osc_paste("cat resources/LOREM_IPSUM.txt")
         .unwrap();
     assert_scrolling_off(&mut tattoy).await;
 
@@ -136,7 +136,7 @@ async fn palette_to_true_colour() {
     let (mut tattoy, _) = crate::utils::start_tattoy(None).await;
 
     tattoy
-        .send_command("echo -e \"\\033[0;31m$((1000-1))\\033[m\"")
+        .send_command_with_osc_paste("echo -e \"\\033[0;31m$((1000-1))\\033[m\"")
         .unwrap();
     tattoy.wait_for_string("999", None).await.unwrap();
 
@@ -157,7 +157,7 @@ async fn minimap() {
     let size = tattoy.shadow_terminal.terminal.get_size();
 
     tattoy
-        .send_command("cat resources/LOREM_IPSUM.txt")
+        .send_command_with_osc_paste("cat resources/LOREM_IPSUM.txt")
         .unwrap();
     tattoy.wait_for_string("nulla", None).await.unwrap();
     tattoy
@@ -218,7 +218,7 @@ async fn plugins() {
     conf_file.write_all(config.as_bytes()).unwrap();
 
     let (mut tattoy, _) = crate::utils::start_tattoy(Some(conf_dir.to_string_lossy().into())).await;
-    tattoy.send_command("ls").unwrap();
+    tattoy.send_command_with_osc_paste("ls").unwrap();
     let size = tattoy.shadow_terminal.terminal.get_size();
     let bottom = size.rows - 1;
     let right = size.cols - 1;
@@ -305,9 +305,11 @@ async fn auto_text_contrast() {
         bg.relative_contrast(fg)
     }
 
+    crate::utils::setup_logging();
+
     let (mut tattoy, _) = crate::utils::start_tattoy(None).await;
     tattoy
-        .send_command("resources/print_low_contrast_samples.sh")
+        .send_command_with_osc_paste("resources/print_low_contrast_samples.sh")
         .unwrap();
     tattoy.wait_for_string("middle", None).await.unwrap();
     tattoy.wait_for_string("dark", None).await.unwrap();
