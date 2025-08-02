@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 PROJECT_ROOT=$(dirname "$(readlink -f "$0")")
 
