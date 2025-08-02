@@ -97,3 +97,13 @@ jobs:
         run: cargo shear
       - name: Verify Minimum Stable Rust Version
         run: cargo msrv verify --path crates/tattoy
+
+  nix:
+    name: "Build with Nix ❄️"
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: cachix/install-nix-action@v31
+      - uses: actions/checkout@v4
+      - name: Build flake.nix
+        run: nix build
