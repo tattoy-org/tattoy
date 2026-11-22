@@ -9,6 +9,8 @@ edition = "2021"
 [dependencies]
 bon = "3.6.0"
 serde.workspace = true
+
+[dev-dependencies]
 serde_json.workspace = true
 
 [lints]
