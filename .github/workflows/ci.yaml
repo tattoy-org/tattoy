@@ -82,7 +82,10 @@ jobs:
       - name: Install system dependencies
         run: sudo apt-get install libdbus-1-dev
       - uses: actions/checkout@v4
-      - run: rustup toolchain install $RUST_VERSION --profile minimal
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+          components: clippy, rustfmt
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-shear, cargo-msrv

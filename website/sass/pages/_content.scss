@@ -91,10 +91,12 @@ a {
     background-color: var(--media-content-blockquote-bg-color);
     border-radius: $border-radius;
     padding: 8px;
-    margin: 0px;
+    margin: 0 3em;
   }
 
   blockquote p {
+    border-left: 4px solid var(--media-content-blockquote-text-color);
+    padding-left: 1em;
     margin-top: 0px;
     margin-bottom: 0px;
   }
